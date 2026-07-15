@@ -157,6 +157,23 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--t1);min-height:100vh;f
 .btn-add{display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--ink-solid);border:none;border-radius:var(--r2);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;flex-shrink:0}
 .btn-add:hover{background:var(--gold-d)}
 .btn-e{padding:5px 10px;background:var(--b2);border:1px solid var(--b);border-radius:6px;color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-danger{padding:12px;background:#fff;border:1px solid #D64545;border-radius:var(--r2);color:#D64545;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-danger:hover{background:#D64545;color:#fff}
+.sa-card{background:var(--bg2);border:1px solid var(--b);border-radius:var(--r2);padding:16px;margin-bottom:10px;display:flex;flex-direction:column;gap:10px}
+.sa-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.sa-card-name{font-weight:700;font-size:15px;color:var(--t1)}
+.sa-card-kod{font-size:12px;color:var(--t2);font-family:monospace;margin-top:2px}
+.sa-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.sa-badge-on{background:#E3F5E9;color:#1E8A4C}
+.sa-badge-off{background:#FCE8E8;color:#B23A3A}
+.sa-card-stats{display:flex;gap:16px;font-size:12px;color:var(--t2)}
+.sa-card-stats b{color:var(--t1)}
+.sa-user-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--b)}
+.sa-user-row:last-child{border-bottom:none}
+.sa-user-info{display:flex;flex-direction:column;gap:2px}
+.sa-user-login{font-weight:600;font-size:14px;color:var(--t1)}
+.sa-user-meta{font-size:11.5px;color:var(--t2)}
+.sa-user-rol{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--b2);color:var(--t2);text-transform:uppercase;letter-spacing:.3px}
 .btn-e:hover{background:var(--gold-bg);border-color:#E8D9BE;color:var(--gold-d)}
 .btn-d{padding:5px 8px;background:var(--err2);border:none;border-radius:6px;color:var(--err);font-size:12px;cursor:pointer}
 
@@ -750,6 +767,24 @@ textarea.inp{resize:vertical;min-height:80px}
       </div>
     </div>
 
+    <!-- SUPERADMIN: KOMPANIYALAR -->
+    <div class="view" id="viewKompaniyalar">
+      <div class="ph">
+        <div><div class="ph-t">Kompaniyalar</div><div class="ph-s">Ilovadan foydalanuvchi tashkilotlar</div></div>
+        <button class="btn-add" onclick="openYangiKompaniyaModal()">+ Yangi kompaniya</button>
+      </div>
+      <div id="kompaniyalarList"></div>
+    </div>
+
+    <!-- SUPERADMIN: FOYDALANUVCHILAR -->
+    <div class="view" id="viewFoydalanuvchilar">
+      <div class="ph"><div><div class="ph-t">Foydalanuvchilar</div><div class="ph-s">Barcha prorab va mijozlar</div></div></div>
+      <div class="filter-bar">
+        <input class="inp fsel" type="text" id="faUserSearch" placeholder="Login, ism yoki kompaniya bo'yicha qidirish..." oninput="renderSuperadminFoydalanuvchilar()" style="flex:1">
+      </div>
+      <div class="card" style="padding:0 16px"><div id="foydalanuvchilarList"></div></div>
+    </div>
+
     <div class="app-footer">VISART — Arxitektura dizayn xizmatlari &nbsp;·&nbsp; +998 97 402 15 15 &nbsp;·&nbsp; visartdesign.uz</div>
   </main>
   <nav class="bottom-nav" id="bottomNav"></nav>
@@ -1027,6 +1062,49 @@ textarea.inp{resize:vertical;min-height:80px}
 </div>
 
 <!-- MODAL: XIZMAT HAQQI AVANS -->
+<div class="mo" id="modalYangiKompaniya">
+  <div class="ms">
+    <div class="ms-hd"><div class="handle"></div><div class="ms-t">Yangi Kompaniya</div></div>
+    <div class="ms-body">
+      <div class="fg"><label class="fl">Kompaniya nomi</label><input class="inp" type="text" id="ykNomi" placeholder="masalan: Aziz Qurilish"></div>
+      <div class="fg"><label class="fl">Ro'yxatdan o'tish kodi</label><input class="inp" type="text" id="ykKod" placeholder="masalan: AZIZ-2026" autocapitalize="characters"></div>
+      <div class="lerr" id="ykError"></div>
+      <button class="btn-main" onclick="saveYangiKompaniya()">Yaratish</button>
+    </div>
+  </div>
+</div>
+
+<div class="mo" id="modalKompaniyaTahrir">
+  <div class="ms">
+    <div class="ms-hd"><div class="handle"></div><div class="ms-t">Kompaniyani Tahrirlash</div></div>
+    <div class="ms-body">
+      <input type="hidden" id="ktId">
+      <div class="fg"><label class="fl">Kompaniya nomi</label><input class="inp" type="text" id="ktNomi"></div>
+      <div class="fg"><label class="fl">Ro'yxatdan o'tish kodi</label><input class="inp" type="text" id="ktKod" autocapitalize="characters"></div>
+      <div class="info-box">Kodni o'zgartirsangiz, eski kod bilan endi hech kim ro'yxatdan o'ta olmaydi. Yangi kodni kompaniya prorabiga o'zingiz yetkazing.</div>
+      <div class="lerr" id="ktError"></div>
+      <button class="btn-main" onclick="saveKompaniyaTahrir()">Saqlash</button>
+    </div>
+  </div>
+</div>
+
+<div class="mo" id="modalFoydalanuvchi">
+  <div class="ms">
+    <div class="ms-hd"><div class="handle"></div><div class="ms-t" id="fuTitle">Foydalanuvchi</div></div>
+    <div class="ms-body">
+      <input type="hidden" id="fuOldLogin">
+      <div class="info-box" id="fuInfo"></div>
+      <div class="fg"><label class="fl">Login</label><input class="inp" type="text" id="fuLogin" autocapitalize="none"></div>
+      <button class="btn-e" style="width:100%;margin-bottom:14px" onclick="saveSuperadminLogin()">Loginni yangilash</button>
+      <div class="fg"><label class="fl">Yangi parol</label><input class="inp" type="text" id="fuYangiParol" placeholder="kamida 6 belgi"></div>
+      <button class="btn-e" style="width:100%;margin-bottom:14px" onclick="saveSuperadminPassword()">Parolni tiklash</button>
+      <div class="lerr" id="fuError"></div>
+      <div class="lok" id="fuOk"></div>
+      <button class="btn-danger" style="width:100%;margin-top:6px" onclick="deleteSuperadminUser()">Akkauntni butunlay o'chirish</button>
+    </div>
+  </div>
+</div>
+
 <div class="mo" id="modalXizmat">
   <div class="ms">
     <div class="ms-hd"><div class="handle"></div><div class="ms-t">Xizmat Haqqidan Avans Oldim</div></div>
@@ -1154,15 +1232,15 @@ async function callManageAuth(action,payload){
 
 // Baza <-> Ilova maydon nomlarini moslashtirish (snake_case <-> camelCase)
 function obRow(r){return{id:r.id,nom:r.nom,mijozIsm:r.mijoz_ism,mijozLogin:r.mijoz_login,mijozTel:r.mijoz_tel,maydon:r.maydon,sana:r.sana,holat:r.holat,prorabLogin:r.prorab_login,smeta:Number(r.smeta)||0,xizmatTuri:r.xizmat_turi||'yoq',xizmatFoiz:Number(r.xizmat_foiz)||0,xizmatOylik:Number(r.xizmat_oylik)||0,obyektTuri:r.obyekt_turi||'ikki',tugashSana:r.tugash_sana||''};}
-function obToRow(o){return{id:o.id,nom:o.nom,mijoz_ism:o.mijozIsm,mijoz_login:o.mijozLogin,mijoz_tel:o.mijozTel,maydon:o.maydon,sana:o.sana,holat:o.holat,prorab_login:o.prorabLogin,smeta:o.smeta||0,xizmat_turi:o.xizmatTuri||'yoq',xizmat_foiz:o.xizmatFoiz||0,xizmat_oylik:o.xizmatOylik||0,obyekt_turi:o.obyektTuri||'ikki',tugash_sana:o.tugashSana||null};}
+function obToRow(o){return{id:o.id,nom:o.nom,mijoz_ism:o.mijozIsm,mijoz_login:o.mijozLogin,mijoz_tel:o.mijozTel,maydon:o.maydon,sana:o.sana,holat:o.holat,prorab_login:o.prorabLogin,smeta:o.smeta||0,xizmat_turi:o.xizmatTuri||'yoq',xizmat_foiz:o.xizmatFoiz||0,xizmat_oylik:o.xizmatOylik||0,obyekt_turi:o.obyektTuri||'ikki',tugash_sana:o.tugashSana||null,kompaniya_id:currentUser.kompaniyaId};}
 function xarRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,kat:r.kat,subkat:r.subkat,mahsulot:r.mahsulot,birlik:r.birlik,narx:Number(r.narx),miqdor:Number(r.miqdor),jami:Number(r.jami),izoh:r.izoh,rasmUrl:r.rasm_url,rasmlarQoshimcha:r.rasmlar_qoshimcha||'[]'};}
-function xarToRow(x){return{id:x.id,obyekt_id:x.obyektId,sana:x.sana,kat:x.kat,subkat:x.subkat,mahsulot:x.mahsulot,birlik:x.birlik,narx:x.narx,miqdor:x.miqdor,jami:x.jami,izoh:x.izoh,rasm_url:x.rasmUrl||null,rasmlar_qoshimcha:x.rasmlarQoshimcha||'[]'};}
+function xarToRow(x){return{id:x.id,obyekt_id:x.obyektId,sana:x.sana,kat:x.kat,subkat:x.subkat,mahsulot:x.mahsulot,birlik:x.birlik,narx:x.narx,miqdor:x.miqdor,jami:x.jami,izoh:x.izoh,rasm_url:x.rasmUrl||null,rasmlar_qoshimcha:x.rasmlarQoshimcha||'[]',kompaniya_id:currentUser.kompaniyaId};}
 function tolRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,summa:Number(r.summa),turi:r.turi,izoh:r.izoh};}
-function tolToRow(t){return{id:t.id,obyekt_id:t.obyektId,sana:t.sana,summa:t.summa,turi:t.turi,izoh:t.izoh};}
+function tolToRow(t){return{id:t.id,obyekt_id:t.obyektId,sana:t.sana,summa:t.summa,turi:t.turi,izoh:t.izoh,kompaniya_id:currentUser.kompaniyaId};}
 function zakRow(r){return{id:r.id,obyektId:r.obyekt_id,nomi:r.nomi,turi:r.turi,taminotchi:r.taminotchi,umumiy:Number(r.umumiy),avans:Number(r.avans),sana:r.sana,tayyorSana:r.tayyor_sana,holat:r.holat,izoh:r.izoh};}
-function zakToRow(z){return{id:z.id,obyekt_id:z.obyektId,nomi:z.nomi,turi:z.turi,taminotchi:z.taminotchi,umumiy:z.umumiy,avans:z.avans,sana:z.sana,tayyor_sana:z.tayyorSana||null,holat:z.holat,izoh:z.izoh};}
+function zakToRow(z){return{id:z.id,obyekt_id:z.obyektId,nomi:z.nomi,turi:z.turi,taminotchi:z.taminotchi,umumiy:z.umumiy,avans:z.avans,sana:z.sana,tayyor_sana:z.tayyorSana||null,holat:z.holat,izoh:z.izoh,kompaniya_id:currentUser.kompaniyaId};}
 function xizRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,summa:Number(r.summa),izoh:r.izoh};}
-function xizToRow(x){return{id:x.id,obyekt_id:x.obyektId,sana:x.sana,summa:x.summa,izoh:x.izoh};}
+function xizToRow(x){return{id:x.id,obyekt_id:x.obyektId,sana:x.sana,summa:x.summa,izoh:x.izoh,kompaniya_id:currentUser.kompaniyaId};}
 
 async function loadDB(){
   // Mijoz faqat o'z obyektini oladi — trafik va sizib chiqishni kamaytiradi (RLS server tomonda asosiy himoya)
@@ -1224,19 +1302,20 @@ function xizmatHaqqiUmumiy(ob,jX){
 
 async function loadUsers(){const{data,error}=await sb.from('mijozlar').select('*');if(error){console.error(error);return{};}const o={};(data||[]).forEach(r=>{o[r.login]={rol:'mijoz',ism:r.ism,avatar:r.avatar,obyektId:r.obyekt_id,tel:r.tel};});return o;}
 
-// ── KOMPANIYA KODI: 'sozlamalar' jadvalidan dinamik o'qiladi/yoziladi ──
-// Supabase'da quyidagi jadval bo'lishi kerak:
-// create table sozlamalar (key text primary key, value text);
+// ── KOMPANIYA KODI: endi har bir kompaniya 'kompaniyalar' jadvalida
+//    o'z kodiga ega. Joriy foydalanuvchining kompaniyasi kodi shu yerdan olinadi/yoziladi.
 let KOMPANIYA_KOD_DINAMIK=null;
 async function loadKompaniyaKod(){
   try{
-    const{data,error}=await sb.from('sozlamalar').select('*').eq('key','kompaniya_kod').maybeSingle();
+    if(!currentUser?.kompaniyaId)return KOMPANIYA_KOD;
+    const{data,error}=await sb.from('kompaniyalar').select('kod').eq('id',currentUser.kompaniyaId).maybeSingle();
     if(error||!data){KOMPANIYA_KOD_DINAMIK=KOMPANIYA_KOD;return KOMPANIYA_KOD;}
-    KOMPANIYA_KOD_DINAMIK=data.value;return data.value;
+    KOMPANIYA_KOD_DINAMIK=data.kod;return data.kod;
   }catch(e){console.error(e);KOMPANIYA_KOD_DINAMIK=KOMPANIYA_KOD;return KOMPANIYA_KOD;}
 }
 async function saveKompaniyaKod(newKod){
-  const{error}=await sb.from('sozlamalar').upsert({key:'kompaniya_kod',value:newKod});
+  if(!currentUser?.kompaniyaId)return{error:{message:"Kompaniya aniqlanmadi"}};
+  const{error}=await sb.from('kompaniyalar').update({kod:newKod}).eq('id',currentUser.kompaniyaId);
   if(!error)KOMPANIYA_KOD_DINAMIK=newKod;
   return{error};
 }
@@ -1277,7 +1356,7 @@ async function submitNewPassword(){
 }
 
 async function loadChat(){const ids=getObs().map(o=>o.id);if(!ids.length)return{};const{data,error}=await sb.from('chat_xabarlar').select('*').in('obyekt_id',ids).order('vaqt',{ascending:false}).limit(300);if(data)data.reverse();if(error){console.error(error);return{};}const c={};(data||[]).forEach(m=>{if(!c[m.obyekt_id])c[m.obyekt_id]=[];c[m.obyekt_id].push({from:m.from_login,fromName:m.from_ism,text:m.matn,time:m.vaqt,read:m.oqilgan,rowId:m.id});});return c;}
-async function insertChatMsg(obId,from,fromName,text){return sb.from('chat_xabarlar').insert({obyekt_id:obId,from_login:from,from_ism:fromName,matn:text,oqilgan:false});}
+async function insertChatMsg(obId,from,fromName,text){return sb.from('chat_xabarlar').insert({obyekt_id:obId,from_login:from,from_ism:fromName,matn:text,oqilgan:false,kompaniya_id:currentUser.kompaniyaId});}
 async function markChatRead(rowIds){if(!rowIds.length)return;return sb.from('chat_xabarlar').update({oqilgan:true}).in('id',rowIds);}
 
 let DB={obyektlar:[],xarajatlar:[],tolovlar:[],zakazlar:[],xizmatTolovlar:[]},currentUser=null,activeView='kassa',currentChatObj=null;
@@ -1510,10 +1589,12 @@ function switchAuthTab(tab){document.getElementById('tabLoginBtn').classList.tog
 async function loadCurrentProfile(){
   const{data:{user}}=await sb.auth.getUser();
   if(!user)return false;
+  const{data:sa}=await sb.from('superadmins').select('*').eq('user_id',user.id).maybeSingle();
+  if(sa){currentUser={login:sa.login,rol:'superadmin',ism:sa.ism,avatar:'SA'};return true;}
   const{data:pr}=await sb.from('prorablar').select('*').eq('user_id',user.id).maybeSingle();
-  if(pr){currentUser={login:pr.login,rol:'prorab',ism:pr.ism,avatar:pr.avatar,tel:pr.tel||''};return true;}
+  if(pr){currentUser={login:pr.login,rol:'prorab',ism:pr.ism,avatar:pr.avatar,tel:pr.tel||'',kompaniyaId:pr.kompaniya_id};return true;}
   const{data:mj}=await sb.from('mijozlar').select('*').eq('user_id',user.id).maybeSingle();
-  if(mj){currentUser={login:mj.login,rol:'mijoz',ism:mj.ism,avatar:mj.avatar,obyektId:mj.obyekt_id,tel:mj.tel||''};return true;}
+  if(mj){currentUser={login:mj.login,rol:'mijoz',ism:mj.ism,avatar:mj.avatar,obyektId:mj.obyekt_id,tel:mj.tel||'',kompaniyaId:mj.kompaniya_id};return true;}
   return false;
 }
 async function doLogin(){
@@ -1556,7 +1637,12 @@ async function doRegister(){
   setTimeout(()=>{ok.style.display='none';switchAuthTab('login');document.getElementById('loginEmail').value=login;['regKompaniyaKod','regIsm','regTel','regLogin','regParol'].forEach(id=>document.getElementById(id).value='');},1800);
 }
 function showErr(elId,m){const el=document.getElementById(elId);el.textContent=m;el.style.display='block';setTimeout(()=>el.style.display='none',3500);}
-async function startApp(){await refreshDB();document.getElementById('loginScreen').style.display='none';document.getElementById('mainApp').style.display='block';initApp();subscribeRealtime();}
+async function startApp(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('mainApp').style.display='block';
+  if(currentUser.rol==='superadmin'){initSuperadminApp();return;}
+  await refreshDB();initApp();subscribeRealtime();
+}
 async function doLogout(){unsubscribeRealtime();await sb.auth.signOut();currentUser=null;document.getElementById('mainApp').style.display='none';document.getElementById('loginScreen').style.display='flex';document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';switchAuthTab('login');}
 
 // ─── INIT ───
@@ -1584,6 +1670,162 @@ function initApp(){
   checkUnreadChat();
 }
 
+// ─── SUPERADMIN ───
+function initSuperadminApp(){
+  const av=document.getElementById('headerAvatar');
+  av.textContent='SA';av.className='av av-p';
+  document.getElementById('headerName').textContent=currentUser.ism;
+  document.getElementById('headerRole').textContent='Superadmin';
+  const chatBell=document.querySelector('.chat-bell');if(chatBell)chatBell.style.display='none';
+  const tabs=[{id:'kompaniyalar',l:'Kompaniyalar'},{id:'foydalanuvchilar',l:'Foydalanuvchilar'}];
+  const iconMap={kompaniyalar:'ic-building',foydalanuvchilar:'ic-user'};
+  document.getElementById('appNav').innerHTML=tabs.map(t=>`<div class="ni${t.id==='kompaniyalar'?' on':''}" data-id="${t.id}" onclick="switchView('${t.id}')">${t.l}</div>`).join('');
+  document.getElementById('bottomNav').innerHTML=tabs.map(t=>`
+    <div class="bn-item${t.id==='kompaniyalar'?' on':''}" data-id="${t.id}" onclick="switchView('${t.id}')">
+      <i class="ico"><svg><use href="#${iconMap[t.id]}"/></svg></i>
+      <span>${t.l}</span>
+    </div>`).join('');
+  switchView('kompaniyalar');
+}
+
+async function renderSuperadminKompaniyalar(){
+  const el=document.getElementById('kompaniyalarList');
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--t2)">Yuklanmoqda...</div>';
+  const res=await callManageAuth('superadmin_list_companies',{});
+  if(!res.ok){el.innerHTML=`<div class="info-box">Xato: ${esc(res.error||'')}</div>`;return;}
+  const list=res.data||[];
+  if(!list.length){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--t2)">Hali kompaniya yo\'q</div>';return;}
+  el.innerHTML=list.map(k=>`
+    <div class="sa-card">
+      <div class="sa-card-top">
+        <div>
+          <div class="sa-card-name">${esc(k.nomi)}</div>
+          <div class="sa-card-kod">${esc(k.kod)}</div>
+        </div>
+        <span class="sa-badge ${k.faol?'sa-badge-on':'sa-badge-off'}">${k.faol?'FAOL':'BLOKLANGAN'}</span>
+      </div>
+      <div class="sa-card-stats">
+        <div><b>${k.prorab_soni}</b> prorab</div>
+        <div><b>${k.mijoz_soni}</b> mijoz</div>
+        <div><b>${k.obyekt_soni}</b> obyekt</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-e" style="flex:1" onclick="openKompaniyaTahrirModal('${k.id}','${esc(k.nomi).replace(/'/g,"\\'")}','${esc(k.kod)}')">Kodni tahrirlash</button>
+        <button class="btn-e" style="flex:1" onclick="toggleSuperadminKompaniya('${k.id}',${!k.faol})">${k.faol?"Bloklash":"Faollashtirish"}</button>
+      </div>
+    </div>`).join('');
+}
+
+function openKompaniyaTahrirModal(id,nomi,kod){
+  document.getElementById('ktId').value=id;
+  document.getElementById('ktNomi').value=nomi;
+  document.getElementById('ktKod').value=kod;
+  document.getElementById('ktError').style.display='none';
+  document.getElementById('modalKompaniyaTahrir').classList.add('on');
+}
+async function saveKompaniyaTahrir(){
+  const kompaniyaId=document.getElementById('ktId').value;
+  const nomi=document.getElementById('ktNomi').value.trim();
+  const kod=document.getElementById('ktKod').value.trim().toUpperCase();
+  if(!nomi||!kod){showErr('ktError','Ikkala maydonni ham to\'ldiring');return;}
+  const res=await callManageAuth('superadmin_update_company',{kompaniyaId,nomi,kod});
+  if(!res.ok){showErr('ktError',res.error||'Xato yuz berdi');return;}
+  document.getElementById('modalKompaniyaTahrir').classList.remove('on');
+  notify('Kompaniya yangilandi');
+  renderSuperadminKompaniyalar();
+}
+
+function openYangiKompaniyaModal(){
+  document.getElementById('ykNomi').value='';
+  document.getElementById('ykKod').value='';
+  document.getElementById('ykError').style.display='none';
+  document.getElementById('modalYangiKompaniya').classList.add('on');
+}
+async function saveYangiKompaniya(){
+  const nomi=document.getElementById('ykNomi').value.trim();
+  const kod=document.getElementById('ykKod').value.trim().toUpperCase();
+  if(!nomi||!kod){showErr('ykError','Ikkala maydonni ham to\'ldiring');return;}
+  const res=await callManageAuth('superadmin_create_company',{nomi,kod});
+  if(!res.ok){showErr('ykError',res.error||'Xato yuz berdi');return;}
+  document.getElementById('modalYangiKompaniya').classList.remove('on');
+  notify('Kompaniya yaratildi');
+  renderSuperadminKompaniyalar();
+}
+async function toggleSuperadminKompaniya(id,newFaol){
+  if(!confirm(newFaol?'Kompaniyani qayta faollashtirasizmi?':'Kompaniyani bloklaysizmi? Undagi foydalanuvchilar kira olmay qoladi.'))return;
+  const res=await callManageAuth('superadmin_toggle_company',{kompaniyaId:id,faol:newFaol});
+  if(!res.ok){notify(res.error||'Xato yuz berdi');return;}
+  notify(newFaol?'Faollashtirildi':'Bloklandi');
+  renderSuperadminKompaniyalar();
+}
+
+let SA_USERS_CACHE=[];
+async function renderSuperadminFoydalanuvchilar(){
+  const el=document.getElementById('foydalanuvchilarList');
+  const q=(document.getElementById('faUserSearch').value||'').trim().toLowerCase();
+  if(!SA_USERS_CACHE.length||!q){
+    if(!q){
+      el.innerHTML='<div style="text-align:center;padding:30px;color:var(--t2)">Yuklanmoqda...</div>';
+      const res=await callManageAuth('superadmin_list_users',{});
+      if(!res.ok){el.innerHTML=`<div class="info-box">Xato: ${esc(res.error||'')}</div>`;return;}
+      SA_USERS_CACHE=res.data||[];
+    }
+  }
+  let list=SA_USERS_CACHE;
+  if(q)list=list.filter(u=>(u.login||'').toLowerCase().includes(q)||(u.ism||'').toLowerCase().includes(q)||(u.kompaniya_nomi||'').toLowerCase().includes(q));
+  if(!list.length){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--t2)">Foydalanuvchi topilmadi</div>';return;}
+  el.innerHTML=list.map(u=>`
+    <div class="sa-user-row">
+      <div class="sa-user-info">
+        <div class="sa-user-login">${esc(u.ism||u.login)} <span class="sa-user-rol">${u.rol}</span></div>
+        <div class="sa-user-meta">${esc(u.login)} · ${esc(u.kompaniya_nomi)} ${u.tel?'· '+esc(u.tel):''}</div>
+      </div>
+      <button class="btn-e" onclick="openSuperadminUserModal('${esc(u.login)}','${u.rol}')">Boshqarish</button>
+    </div>`).join('');
+}
+
+function openSuperadminUserModal(login,rol){
+  document.getElementById('fuOldLogin').value=login;
+  document.getElementById('fuLogin').value=login;
+  document.getElementById('fuYangiParol').value='';
+  document.getElementById('fuTitle').textContent=(rol==='prorab'?'Prorab':'Mijoz')+': '+login;
+  document.getElementById('fuInfo').textContent="Login o'zgartirsangiz, foydalanuvchi eski login bilan kira olmaydi — yangisini o'zingiz yetkazing.";
+  document.getElementById('fuError').style.display='none';
+  document.getElementById('fuOk').style.display='none';
+  document.getElementById('modalFoydalanuvchi').classList.add('on');
+}
+async function saveSuperadminLogin(){
+  const oldLogin=document.getElementById('fuOldLogin').value;
+  const newLogin=document.getElementById('fuLogin').value.trim().toLowerCase();
+  if(!newLogin){showErr('fuError','Login kiriting');return;}
+  const res=await callManageAuth('superadmin_update_login',{oldLogin,newLogin});
+  if(!res.ok){showErr('fuError',res.error||'Xato yuz berdi');return;}
+  document.getElementById('fuOldLogin').value=newLogin;
+  const ok=document.getElementById('fuOk');ok.textContent='Login yangilandi';ok.style.display='block';
+  SA_USERS_CACHE=[];
+  notify('Login yangilandi');
+}
+async function saveSuperadminPassword(){
+  const targetLogin=document.getElementById('fuOldLogin').value;
+  const newPassword=document.getElementById('fuYangiParol').value;
+  if(!newPassword||newPassword.length<6){showErr('fuError','Parol kamida 6 belgi');return;}
+  const res=await callManageAuth('superadmin_reset_password',{targetLogin,newPassword});
+  if(!res.ok){showErr('fuError',res.error||'Xato yuz berdi');return;}
+  document.getElementById('fuYangiParol').value='';
+  const ok=document.getElementById('fuOk');ok.textContent='Parol yangilandi';ok.style.display='block';
+  notify('Parol yangilandi');
+}
+async function deleteSuperadminUser(){
+  const targetLogin=document.getElementById('fuOldLogin').value;
+  if(!confirm(`"${targetLogin}" akkauntini BUTUNLAY o'chirmoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi.`))return;
+  const res=await callManageAuth('superadmin_delete_user',{targetLogin});
+  if(!res.ok){showErr('fuError',res.error||'Xato yuz berdi');return;}
+  document.getElementById('modalFoydalanuvchi').classList.remove('on');
+  SA_USERS_CACHE=[];
+  notify("Akkaunt o'chirildi");
+  renderSuperadminFoydalanuvchilar();
+}
+
 function switchView(id){
   activeView=id;
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
@@ -1598,6 +1840,8 @@ function switchView(id){
   if(id==='obyektlar')renderObyektlar();
   if(id==='profil')renderProfil();
   if(id==='chat')initChat();
+  if(id==='kompaniyalar')renderSuperadminKompaniyalar();
+  if(id==='foydalanuvchilar')renderSuperadminFoydalanuvchilar();
 }
 
 // ─── KASSA ───
