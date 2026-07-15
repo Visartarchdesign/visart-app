@@ -190,7 +190,8 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--t1);min-height:100vh;f
 .sl{font-size:10px;font-weight:500;color:var(--t4);margin-bottom:6px;letter-spacing:.4px;text-transform:uppercase}
 .sv{font-size:19px;font-weight:700;line-height:1;font-family:'Playfair Display',serif}
 .su{font-size:10px;color:var(--t4);margin-top:3px}
-.sv-r{color:var(--err)}.sv-g{color:var(--ok)}.sv-p{color:var(--t2)}
+.sv-r{color:var(--t2)}.sv-g{color:var(--gold-d)}.sv-p{color:var(--t2)}
+.sv-debt{color:var(--err)}.sv-credit{color:var(--ok)}
 
 /* ── PROGRESS ── */
 .pg-wrap{background:var(--b2);border-radius:99px;height:6px;overflow:hidden;margin:10px 0 6px}
@@ -1875,7 +1876,7 @@ function renderKassa(){
     const jX=jXarajat+jZakAvans; // Buyurtmalarga berilgan avans ham real xarajat hisoblanadi
     const zakQoldiq=zak.reduce((s,z)=>s+(z.umumiy-z.avans),0);
     const q=jT-jX,pct=jX>0?Math.min(100,Math.round(jT/jX*100)):0;
-    const ql=q<0?'sv-r':q>0?'sv-g':'sv-p';
+    const ql=q<0?'sv-debt':q>0?'sv-credit':'sv-p';
     const qt=q<0?`Xozirda mavjud qarzdorlik: ${fmt(Math.abs(q))}`:q>0?`Xozirda qoldiq summa: ${fmt(q)}`:'Baravarda';
     const qr=xar.filter(x=>x.kat==='Qurilish mollari'||x.kat==='Uy qurilishi').reduce((s,x)=>s+x.jami,0);
     const qu=xar.filter(x=>x.kat==='Usta haqqi').reduce((s,x)=>s+x.jami,0);
@@ -2201,7 +2202,7 @@ async function renderObyektlar(){
     const jX=DB.xarajatlar.filter(x=>x.obyektId===ob.id).reduce((s,x)=>s+x.jami,0)+DB.zakazlar.filter(z=>z.obyektId===ob.id).reduce((s,z)=>s+(Number(z.avans)||0),0);
     const jT=DB.tolovlar.filter(t=>t.obyektId===ob.id).reduce((s,t)=>s+t.summa,0);
     const q=jT-jX;
-    const qc=q<0?'sv-r':q>0?'sv-g':'sv-p';
+    const qc=q<0?'sv-debt':q>0?'sv-credit':'sv-p';
     return `
     <div class="ob-card">
       <div class="ob-top">
