@@ -2,10 +2,9 @@
 // Maqsad: PWA sifatida "o'rnatish" imkonini berish + oddiy offline-qobiliyat.
 // Ma'lumotlar (Supabase) doim tarmoqdan olinadi — bu yerda faqat ilova "qobig'i" keshlanadi.
 
-const CACHE_NAME = 'visart-shell-v2';
+const CACHE_NAME = 'visart-shell-v3';
 const SHELL_FILES = [
   './',
-  './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -47,17 +46,22 @@ self.addEventListener('fetch', (event) => {
   if (!req.url.startsWith(self.location.origin)) return;
 
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const network = fetch(req)
-        .then((res) => {
-          if (res && res.status === 200) {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    (async () => {
+      const cached = await caches.match(req).catch(() => null);
+      try {
+        const res = await fetch(req);
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
+        }
+        return res;
+      } catch (e) {
+        // Tarmoq yo'q — keshdan beramiz, u ham bo'lmasa, bosh sahifaga qaytamiz
+        if (cached) return cached;
+        const fallback = await caches.match('./').catch(() => null);
+        if (fallback) return fallback;
+        return new Response('Offline', { status: 503, statusText: 'Offline' });
+      }
+    })()
   );
 });

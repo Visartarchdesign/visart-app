@@ -2,7 +2,7 @@
   "name": "Visart Design — Mijoz kabineti",
   "short_name": "Visart App",
   "description": "Qurilish obyektlari, xarajatlar va to'lovlar hisoboti",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
