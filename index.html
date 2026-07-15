@@ -185,10 +185,12 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--t1);min-height:100vh;f
 /* ── STATS ── */
 .sg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
 .sc{background:var(--bg);border:1px solid var(--b);border-radius:var(--r2);padding:14px 10px;text-align:center}
+.sc-r{background:var(--err2);border-color:var(--err2)}
+.sc-g{background:var(--ok2);border-color:var(--ok2)}
 .sl{font-size:10px;font-weight:500;color:var(--t4);margin-bottom:6px;letter-spacing:.4px;text-transform:uppercase}
 .sv{font-size:19px;font-weight:700;line-height:1;font-family:'Playfair Display',serif}
 .su{font-size:10px;color:var(--t4);margin-top:3px}
-.sv-r{color:var(--t2)}.sv-g{color:var(--gold-d)}.sv-p{color:var(--t2)}
+.sv-r{color:var(--err)}.sv-g{color:var(--ok)}.sv-p{color:var(--t2)}
 
 /* ── PROGRESS ── */
 .pg-wrap{background:var(--b2);border-radius:99px;height:6px;overflow:hidden;margin:10px 0 6px}
@@ -1913,7 +1915,7 @@ function renderKassa(){
       <div class="sg">
         <div class="sc"><div class="sl">Xarajat</div><div class="sv sv-r">${(jX/1000000).toFixed(2)}</div><div class="su">mln soʻm</div></div>
         <div class="sc"><div class="sl">To'lov</div><div class="sv sv-g">${(jT/1000000).toFixed(2)}</div><div class="su">mln soʻm</div></div>
-        <div class="sc"><div class="sl">Qoldiq</div><div class="sv ${ql}">${(Math.abs(q)/1000000).toFixed(2)}</div><div class="su">${q<0?'mavjud qarzdorlik':q>0?'qoldiq summa':'teng'}</div></div>
+        <div class="sc ${q<0?'sc-r':q>0?'sc-g':''}"><div class="sl">Qoldiq</div><div class="sv ${ql}">${(Math.abs(q)/1000000).toFixed(2)}</div><div class="su">${q<0?'mavjud qarzdorlik':q>0?'qoldiq summa':'teng'}</div></div>
       </div>
       <div class="pg-wrap"><div class="pg-bar" style="width:${pct}%"></div></div>
       <div class="pg-lbl"><span>To'langan: ${pct}%</span><span>${qt}</span></div>
