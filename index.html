@@ -1955,7 +1955,7 @@ const RU={
 "Usta bilan kelishilgan umumiy summani kiriting. Keyin bergan har bir to'lovingizni (avans, yakuniy hisob-kitob) alohida qo'shib borasiz — qoldiq avtomatik hisoblanadi.":"Укажите общую сумму, согласованную с мастером. Затем добавляйте каждый платёж (аванс, окончательный расчёт) отдельно — остаток считается автоматически.",
 "To'lov qo'shish":"Добавить платёж","Summa (so'm)":"Сумма (сум)","To'lov turi":"Тип платежа","Avans (ish tugallanmagan)":"Аванс (работа не завершена)","Yakuniy hisob-kitob (ish tugallangan)":"Окончательный расчёт (работа завершена)","Oddiy to'lov":"Обычный платёж",
 "Hali usta shartnomasi yo'q":"Пока нет договора с мастером","+ Birinchi ustani qo'shish":"+ Добавить первого мастера",
-"Jami to'langan":"Всего оплачено","Qoldiq summa":"Остаток","To'liq to'langan":"Полностью оплачено","Kelishilgan summa":"Согласованная сумма","To'lovlar tarixi":"История платежей","Hali to'lov yo'q":"Платежей ещё нет",
+"Jami to'langan":"Всего оплачено","Olingan avans":"Полученный аванс","Qoldiq summa":"Остаток","To'liq to'langan":"Полностью оплачено","Kelishilgan summa":"Согласованная сумма","To'lovlar tarixi":"История платежей","Hali to'lov yo'q":"Платежей ещё нет",
 "Jarayonda":"В процессе","Tugallangan":"Завершено",
 "\"Kompaniyani Tahrirlash\"":"Редактировать компанию",
 "Ustani o'chirish":"Удалить мастера",
@@ -2419,7 +2419,6 @@ function renderKassa(){
     const jKontTolov=kontTolList.reduce((s,t)=>s+t.summa,0);
     const jX=jXarajat+jZakAvans+jUstaTolov+jKontTolov; // Buyurtma avansi, usta va kontragent to'lovlari ham real xarajat hisoblanadi
     const zakQoldiq=zak.reduce((s,z)=>s+(z.umumiy-z.avans),0);
-    const ustaQoldiq=usta.reduce((s,u)=>s+Math.max(0,u.kelishilganSumma-ustaJamiTolangan(u.id)),0);
     const kontQoldiq=kont.reduce((s,k)=>s+Math.max(0,k.kelishilganSumma-kontragentJamiTolangan(k.id)),0);
     const xizList=DB.xizmatTolovlar.filter(z=>z.obyektId===ob.id);
     const xizOlingan=xizList.reduce((s,z)=>s+z.summa,0);
@@ -2504,7 +2503,6 @@ function renderKassa(){
         </div>`;
       })():''}
       ${zakQoldiq>0?`<div class="zk-remain" style="margin-top:12px"><span class="zk-remain-lbl"><i class="ico"><svg><use href="#ic-box"/></svg></i> Buyurtmalar bo'yicha kutilayotgan to'lov</span><span class="zk-remain-val">${fmt(zakQoldiq)}</span></div>`:''}
-      ${ustaQoldiq>0?`<div class="zk-remain" style="margin-top:8px"><span class="zk-remain-lbl"><i class="ico"><svg><use href="#ic-user"/></svg></i> Ustalarga qolgan to'lov</span><span class="zk-remain-val">${fmt(ustaQoldiq)}</span></div>`:''}
       ${kontQoldiq>0?`<div class="zk-remain" style="margin-top:8px"><span class="zk-remain-lbl"><i class="ico"><svg><use href="#ic-clipboard"/></svg></i> Boshqa xarajatlar bo'yicha qolgan to'lov</span><span class="zk-remain-val">${fmt(kontQoldiq)}</span></div>`:''}
       <div class="cl">
         ${catRow('qurilish','Qurilish mollari','#B08D57',qr,subDetail('Qurilish mollari'))}
@@ -2983,13 +2981,13 @@ function renderUstalar(){
         <span class="sb ${belgilanmagan?'sb-y':u.holat==='tugallangan'?'sb-g':'sb-y'}">${belgilanmagan?"Hisob-kitob kutilmoqda":u.holat==='tugallangan'?'Tugallangan':'Jarayonda'}</span>
       </div>
       <div class="zk-body">
-        <div class="zk-avans-box"><span class="zk-avans-lbl"><i class="ico"><svg><use href="#ic-wallet"/></svg></i> Jami to'langan</span><span class="zk-avans-val">${fmt(tolangan)}</span></div>
+        ${!belgilanmagan?`<div class="zk-meta-row" style="margin-bottom:10px"><div class="zk-meta-b"><div class="zk-meta-l">Kelishilgan summa</div><div class="zk-meta-v" style="font-size:15px">${fmt(u.kelishilganSumma)}</div></div></div>`:''}
+        <div class="zk-avans-box"><span class="zk-avans-lbl"><i class="ico"><svg><use href="#ic-wallet"/></svg></i> Olingan avans</span><span class="zk-avans-val">${fmt(tolangan)}</span></div>
         ${belgilanmagan
           ?`<div style="font-size:12px;color:var(--t3);margin-top:8px;padding:8px 10px;background:var(--b2);border-radius:8px">Yakuniy summa hali belgilanmagan — ish tugagach "Yakuniy hisob-kitob" tugmasi orqali belgilang.</div>`
           :qoldiq>0?`<div class="zk-remain"><span class="zk-remain-lbl"><i class="ico"><svg><use href="#ic-pin"/></svg></i> Qoldiq summa</span><span class="zk-remain-val">${fmt(qoldiq)}</span></div>`:`<div class="zk-done"><i class="ico"><svg><use href="#ic-check"/></svg></i> To'liq to'langan</div>`}
         ${!belgilanmagan?`<div class="pg-wrap" style="margin-top:10px"><div class="pg-bar" style="width:${pct}%"></div></div>`:''}
         <div class="zk-meta-row">
-          <div class="zk-meta-b"><div class="zk-meta-l">Kelishilgan summa</div><div class="zk-meta-v">${belgilanmagan?'—':fmt(u.kelishilganSumma)}</div></div>
           ${hisobInfo||`<div class="zk-meta-b"><div class="zk-meta-l">Boshlanish sanasi</div><div class="zk-meta-v">${u.boshlanishSana||'—'}</div></div>`}
         </div>
         ${u.izoh?`<div style="margin-top:10px;font-size:12px;color:var(--t3);padding:8px 10px;background:var(--b2);border-radius:8px">${esc(u.izoh)}</div>`:''}
@@ -3216,13 +3214,13 @@ function renderKontragentlar(){
         <span class="sb ${belgilanmagan?'sb-y':k.holat==='tugallangan'?'sb-g':'sb-y'}">${belgilanmagan?"Hisob-kitob kutilmoqda":k.holat==='tugallangan'?'Tugallangan':'Jarayonda'}</span>
       </div>
       <div class="zk-body">
-        <div class="zk-avans-box"><span class="zk-avans-lbl"><i class="ico"><svg><use href="#ic-wallet"/></svg></i> Jami to'langan</span><span class="zk-avans-val">${fmt(tolangan)}</span></div>
+        ${!belgilanmagan?`<div class="zk-meta-row" style="margin-bottom:10px"><div class="zk-meta-b"><div class="zk-meta-l">Kelishilgan summa</div><div class="zk-meta-v" style="font-size:15px">${fmt(k.kelishilganSumma)}</div></div></div>`:''}
+        <div class="zk-avans-box"><span class="zk-avans-lbl"><i class="ico"><svg><use href="#ic-wallet"/></svg></i> Olingan avans</span><span class="zk-avans-val">${fmt(tolangan)}</span></div>
         ${belgilanmagan
           ?`<div style="font-size:12px;color:var(--t3);margin-top:8px;padding:8px 10px;background:var(--b2);border-radius:8px">Yakuniy summa hali belgilanmagan — "Yakuniy hisob-kitob" tugmasi orqali belgilang.</div>`
           :qoldiq>0?`<div class="zk-remain"><span class="zk-remain-lbl"><i class="ico"><svg><use href="#ic-pin"/></svg></i> Qoldiq summa</span><span class="zk-remain-val">${fmt(qoldiq)}</span></div>`:`<div class="zk-done"><i class="ico"><svg><use href="#ic-check"/></svg></i> To'liq to'langan</div>`}
         ${!belgilanmagan?`<div class="pg-wrap" style="margin-top:10px"><div class="pg-bar" style="width:${pct}%"></div></div>`:''}
         <div class="zk-meta-row">
-          <div class="zk-meta-b"><div class="zk-meta-l">Kelishilgan summa</div><div class="zk-meta-v">${belgilanmagan?'—':fmt(k.kelishilganSumma)}</div></div>
           ${hisobInfo||`<div class="zk-meta-b"><div class="zk-meta-l">Boshlanish sanasi</div><div class="zk-meta-v">${k.boshlanishSana||'—'}</div></div>`}
         </div>
         ${k.izoh?`<div style="margin-top:10px;font-size:12px;color:var(--t3);padding:8px 10px;background:var(--b2);border-radius:8px">${esc(k.izoh)}</div>`:''}
