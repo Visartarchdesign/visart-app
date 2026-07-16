@@ -188,6 +188,9 @@ button:focus-visible,.inp:focus-visible{outline:2px solid var(--gold);outline-of
 .sg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
 .sg-4{grid-template-columns:repeat(4,1fr)}
 .sv-sub{font-size:10px;color:var(--t4);margin-top:3px;line-height:1.3}
+.seg-tabs{display:flex;gap:6px;margin-bottom:14px;background:var(--b2);padding:4px;border-radius:11px}
+.seg-btn{flex:1;padding:9px 10px;border:none;background:transparent;border-radius:8px;font-size:13px;font-weight:600;color:var(--t3);cursor:pointer;transition:all .15s;min-height:36px}
+.seg-btn.on{background:var(--bg);color:var(--t1);box-shadow:0 1px 4px rgba(0,0,0,.1)}
 .sc{background:var(--bg);border:1px solid var(--b);border-radius:var(--r2);padding:14px 10px;text-align:center}
 .sc-r{background:var(--err2);border-color:var(--err2)}
 .sc-g{background:var(--ok2);border-color:var(--ok2)}
@@ -668,19 +671,32 @@ textarea.inp{resize:vertical;min-height:80px}
         <div><div class="ph-t">Xarajatlar</div><div class="ph-s">Barcha sarflar</div></div>
         <button class="btn-add" id="btnAddXarajat" onclick="openModal('xarajat')">+ Qo'shish</button>
       </div>
-      <div class="ro-bar" id="xarajatReadonly" style="display:none"></div>
-      <div class="filter-bar">
-        <input class="inp fsel" type="search" id="xfSearch" placeholder="Qidirish: mahsulot, izoh..." oninput="applyXarFilter()" style="flex:1 1 100%" aria-label="Xarajatlarni qidirish">
-        <select class="inp fsel" id="xfKat" onchange="updateXarFilterSubkat();applyXarFilter()">
-          <option value="">Barcha kategoriya</option>
-          <option>Qurilish mollari</option><option>Usta haqqi</option><option>Boshqa xarajatlar</option>
-        </select>
-        <select class="inp fsel" id="xfSubkat" onchange="applyXarFilter()"><option value="">Barcha bo'lim</option></select>
-        <input class="inp fsel" type="date" id="xfSanaDan" onchange="applyXarFilter()" title="Sanadan">
-        <input class="inp fsel" type="date" id="xfSanaGacha" onchange="applyXarFilter()" title="Sanagacha">
-        <button class="btn-e fclear" onclick="clearXarFilter()"><i class="ico"><svg><use href="#ic-close"/></svg></i> Tozalash</button>
+      <div class="seg-tabs">
+        <button class="seg-btn on" id="xtSegList" onclick="switchXarajatlarTab('list')">Xarajatlar</button>
+        <button class="seg-btn" id="xtSegUsta" onclick="switchXarajatlarTab('ustalar')">Ustalar</button>
       </div>
-      <div class="card" style="padding:0;overflow:hidden"><div id="xarajatlarTable"></div></div>
+      <div id="xarajatlarListWrap">
+        <div class="ro-bar" id="xarajatReadonly" style="display:none"></div>
+        <div class="filter-bar">
+          <input class="inp fsel" type="search" id="xfSearch" placeholder="Qidirish: mahsulot, izoh..." oninput="applyXarFilter()" style="flex:1 1 100%" aria-label="Xarajatlarni qidirish">
+          <select class="inp fsel" id="xfKat" onchange="updateXarFilterSubkat();applyXarFilter()">
+            <option value="">Barcha kategoriya</option>
+            <option>Qurilish mollari</option><option>Usta haqqi</option><option>Boshqa xarajatlar</option>
+          </select>
+          <select class="inp fsel" id="xfSubkat" onchange="applyXarFilter()"><option value="">Barcha bo'lim</option></select>
+          <input class="inp fsel" type="date" id="xfSanaDan" onchange="applyXarFilter()" title="Sanadan">
+          <input class="inp fsel" type="date" id="xfSanaGacha" onchange="applyXarFilter()" title="Sanagacha">
+          <button class="btn-e fclear" onclick="clearXarFilter()"><i class="ico"><svg><use href="#ic-close"/></svg></i> Tozalash</button>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden"><div id="xarajatlarTable"></div></div>
+      </div>
+      <div id="xarajatlarUstaWrap" style="display:none">
+        <div class="ph" style="padding:0 0 12px 0">
+          <div class="ph-s" style="margin-top:0">Usta bilan kelishuv, avans va hisob-kitoblar</div>
+          <button class="btn-add" onclick="openUstaModal()">+ Yangi usta</button>
+        </div>
+        <div id="ustaList"></div>
+      </div>
     </div>
 
     <!-- TO'LOVLAR -->
@@ -711,16 +727,6 @@ textarea.inp{resize:vertical;min-height:80px}
       </div>
       <div class="ro-bar" id="zakazReadonly" style="display:none"></div>
       <div id="zakazList"></div>
-    </div>
-
-    <!-- USTALAR -->
-    <div class="view" id="viewUstalar">
-      <div class="ph">
-        <div><div class="ph-t">Ustalar</div><div class="ph-s">Usta bilan kelishuv, avans va hisob-kitoblar</div></div>
-        <button class="btn-add" id="btnAddUsta" onclick="openUstaModal()">+ Yangi usta</button>
-      </div>
-      <div class="ro-bar" id="ustaReadonly" style="display:none"></div>
-      <div id="ustaList"></div>
     </div>
 
     <!-- CHAT -->
@@ -971,12 +977,12 @@ textarea.inp{resize:vertical;min-height:80px}
     <div class="ms-hd"><div class="handle"></div><div class="ms-t" id="ustaModalTitle">Yangi Usta</div></div>
     <div class="ms-body">
       <input type="hidden" id="usId">
-      <div class="info-box"><i class="ico"><svg><use href="#ic-user"/></svg></i> Usta bilan kelishilgan umumiy summani kiriting. Keyin bergan har bir to'lovingizni (avans, yakuniy hisob-kitob) alohida qo'shib borasiz — qoldiq avtomatik hisoblanadi.</div>
+      <div class="info-box"><i class="ico"><svg><use href="#ic-user"/></svg></i> Agar oldindan aniq summa kelishilgan bo'lsa kiriting. Aks holda bo'sh qoldiring — ish davomida avanslarni qo'shib borasiz, ish tugagach "Yakuniy hisob-kitob" orqali bajarilgan hajmga (m², nuqta va h.k.) qarab yakuniy summani belgilaysiz.</div>
       <div class="fg"><label class="fl">Obyekt</label><select class="inp" id="usObyekt"></select></div>
       <div class="fg"><label class="fl">Usta ismi</label><input class="inp" type="text" id="usIsm" placeholder="Aziz aka"></div>
       <div class="fg"><label class="fl">Mutaxassisligi</label><select class="inp" id="usMutaxassislik"></select></div>
       <div class="fr">
-        <div class="fg"><label class="fl">Kelishilgan summa (so'm)</label><input class="inp" type="number" id="usKelishilgan" placeholder="15 000 000"></div>
+        <div class="fg"><label class="fl">Kelishilgan summa (ixtiyoriy)</label><input class="inp" type="number" id="usKelishilgan" placeholder="Agar oldindan aniq bo'lsa (bo'sh qoldirish mumkin)"></div>
         <div class="fg"><label class="fl">Boshlanish sanasi</label><input class="inp" type="date" id="usBoshlanish"></div>
       </div>
       <div class="fg"><label class="fl">Izoh</label><textarea class="inp" id="usIzoh" placeholder="Ish tavsifi, shartlar…"></textarea></div>
@@ -999,6 +1005,44 @@ textarea.inp{resize:vertical;min-height:80px}
       <div class="lerr" id="utError"></div>
     </div>
     <div class="fa"><button class="btn-cancel" onclick="closeModal('ustaTolov')">Bekor</button><button class="btn-save" onclick="saveUstaTolov()">Saqlash</button></div>
+  </div>
+</div>
+
+<!-- MODAL: USTA — YAKUNIY HISOB-KITOB -->
+<div class="mo" id="modalUstaYakun" role="dialog" aria-modal="true">
+  <div class="ms">
+    <div class="ms-hd"><div class="handle"></div><div class="ms-t">Yakuniy hisob-kitob</div></div>
+    <div class="ms-body">
+      <input type="hidden" id="uyUstaId">
+      <div class="info-box"><i class="ico"><svg><use href="#ic-target"/></svg></i> Ish tugagach, bajarilgan hajmni o'lchab yoki to'g'ridan-to'g'ri yakuniy summani kiritib, hisob-kitobni belgilang.</div>
+      <div class="seg-tabs">
+        <button class="seg-btn on" id="uySegDirect" onclick="switchUstaYakunMode('direct')">To'g'ridan-to'g'ri summa</button>
+        <button class="seg-btn" id="uySegCalc" onclick="switchUstaYakunMode('calc')">Hajm × Narx</button>
+      </div>
+      <div id="uyDirectWrap">
+        <div class="fg"><label class="fl">Yakuniy summa (so'm)</label><input class="inp" type="number" id="uyDirectSumma" placeholder="15 000 000"></div>
+      </div>
+      <div id="uyCalcWrap" style="display:none">
+        <div class="fg"><label class="fl">O'lchov birligi</label><select class="inp" id="uyBirlik">
+          <option value="m2">m² (kvadrat metr) — malyar, plitka, shpaklovka</option>
+          <option value="metr">Metr (chiziqli)</option>
+          <option value="pogonniy">Pogonniy metr — plintus, quvur</option>
+          <option value="m3">m³ (kub metr) — beton, qazish</option>
+          <option value="list">List (varaq) — gipsokarton</option>
+          <option value="tochka">Tochka (nuqta) — santexnik, elektrik</option>
+          <option value="kun">Kunlik ish</option>
+          <option value="oy">Oylik ish</option>
+          <option value="boshqa">Boshqa</option>
+        </select></div>
+        <div class="fr">
+          <div class="fg"><label class="fl">Miqdori</label><input class="inp" type="number" id="uyMiqdor" placeholder="45" oninput="calcUstaYakun()"></div>
+          <div class="fg"><label class="fl">Narxi (1 birlik)</label><input class="inp" type="number" id="uyNarx" placeholder="80 000" oninput="calcUstaYakun()"></div>
+        </div>
+        <div class="fg"><label class="fl">Jami — avtomatik</label><input class="inp" type="text" id="uyHisoblangan" readonly style="font-weight:700;font-size:16px;color:var(--t1)"></div>
+      </div>
+      <div class="lerr" id="uyError"></div>
+    </div>
+    <div class="fa"><button class="btn-cancel" onclick="closeModal('ustaYakun')">Bekor</button><button class="btn-save" onclick="saveUstaYakun()">Saqlash</button></div>
   </div>
 </div>
 
@@ -1388,8 +1432,8 @@ function zakRow(r){return{id:r.id,obyektId:r.obyekt_id,nomi:r.nomi,turi:r.turi,t
 function zakToRow(z){return{id:z.id,obyekt_id:z.obyektId,nomi:z.nomi,turi:z.turi,taminotchi:z.taminotchi,umumiy:z.umumiy,avans:z.avans,sana:z.sana,tayyor_sana:z.tayyorSana||null,holat:z.holat,izoh:z.izoh,kompaniya_id:currentUser.kompaniyaId};}
 function xizRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,summa:Number(r.summa),izoh:r.izoh};}
 function xizToRow(x){return{id:x.id,obyekt_id:x.obyektId,sana:x.sana,summa:x.summa,izoh:x.izoh,kompaniya_id:currentUser.kompaniyaId};}
-function ustaRow(r){return{id:r.id,obyektId:r.obyekt_id,ism:r.ism,mutaxassislik:r.mutaxassislik,kelishilganSumma:Number(r.kelishilgan_summa),boshlanishSana:r.boshlanish_sana,holat:r.holat,izoh:r.izoh};}
-function ustaToRow(u){return{id:u.id,obyekt_id:u.obyektId,ism:u.ism,mutaxassislik:u.mutaxassislik,kelishilgan_summa:u.kelishilganSumma,boshlanish_sana:u.boshlanishSana||null,holat:u.holat,izoh:u.izoh,kompaniya_id:currentUser.kompaniyaId};}
+function ustaRow(r){return{id:r.id,obyektId:r.obyekt_id,ism:r.ism,mutaxassislik:r.mutaxassislik,kelishilganSumma:Number(r.kelishilgan_summa)||0,boshlanishSana:r.boshlanish_sana,holat:r.holat,izoh:r.izoh,hisobBirligi:r.hisob_birligi||null,hisobMiqdori:r.hisob_miqdori!=null?Number(r.hisob_miqdori):null,birlikNarxi:r.birlik_narxi!=null?Number(r.birlik_narxi):null};}
+function ustaToRow(u){return{id:u.id,obyekt_id:u.obyektId,ism:u.ism,mutaxassislik:u.mutaxassislik,kelishilgan_summa:u.kelishilganSumma||0,boshlanish_sana:u.boshlanishSana||null,holat:u.holat,izoh:u.izoh,hisob_birligi:u.hisobBirligi||null,hisob_miqdori:u.hisobMiqdori!=null?u.hisobMiqdori:null,birlik_narxi:u.birlikNarxi!=null?u.birlikNarxi:null,kompaniya_id:currentUser.kompaniyaId};}
 function ustaTolRow(r){return{id:r.id,ustaId:r.usta_id,obyektId:r.obyekt_id,sana:r.sana,summa:Number(r.summa),turi:r.turi,izoh:r.izoh};}
 function ustaTolToRow(t){return{id:t.id,usta_id:t.ustaId,obyekt_id:t.obyektId,sana:t.sana,summa:t.summa,turi:t.turi,izoh:t.izoh,kompaniya_id:currentUser.kompaniyaId};}
 
@@ -1402,7 +1446,7 @@ async function loadDB(){
   const TO_COLS='id,obyekt_id,sana,summa,turi,izoh';
   const ZA_COLS='id,obyekt_id,nomi,turi,taminotchi,umumiy,avans,sana,tayyor_sana,holat,izoh';
   const XZ_COLS='id,obyekt_id,sana,summa,izoh';
-  const US_COLS='id,obyekt_id,ism,mutaxassislik,kelishilgan_summa,boshlanish_sana,holat,izoh';
+  const US_COLS='id,obyekt_id,ism,mutaxassislik,kelishilgan_summa,boshlanish_sana,holat,izoh,hisob_birligi,hisob_miqdori,birlik_narxi';
   const UT_COLS='id,usta_id,obyekt_id,sana,summa,turi,izoh';
   const [ob,xa,to,za,xz,us,ut]=await Promise.all([
     mine?sb.from('obyektlar').select(OB_COLS).eq('id',mine):sb.from('obyektlar').select(OB_COLS),
@@ -1817,7 +1861,17 @@ const RU={
 "Usta ismini kiriting":"Введите имя мастера","Kelishilgan summani to'g'ri kiriting":"Введите корректную согласованную сумму","Summani to'g'ri kiriting":"Введите корректную сумму",
 "To'lov qo'shildi":"Платёж добавлен",
 "Muallif nazorati":"Авторский надзор","Bu summa umumiy xarajatga qo'shilmaydi — alohida hisoblanadi":"Эта сумма не входит в общий расход — учитывается отдельно",
-"Buyurtma mahsulotlar":"Заказанные товары","qoldiq:":"остаток:"
+"Buyurtma mahsulotlar":"Заказанные товары","qoldiq:":"остаток:",
+"Yakuniy hisob-kitob":"Окончательный расчёт","Hisob-kitobni yangilash":"Обновить расчёт","Hisob-kitob kutilmoqda":"Ожидает расчёта",
+"Kelishilgan summa (ixtiyoriy)":"Согласованная сумма (необязательно)","Agar oldindan aniq bo'lsa (bo'sh qoldirish mumkin)":"Если известна заранее (можно оставить пустым)",
+"To'g'ridan-to'g'ri summa":"Прямая сумма","Hajm × Narx":"Объём × Цена","O'lchov birligi":"Единица измерения","Miqdori":"Количество","Narxi (1 birlik)":"Цена (за 1 ед.)","Jami — avtomatik":"Итого — авто",
+"m² (kvadrat metr) — malyar, plitka, shpaklovka":"м² (кв. метр) — маляр, плитка, шпаклёвка","Metr (chiziqli)":"Метр (линейный)","Pogonniy metr — plintus, quvur":"Погонный метр — плинтус, труба",
+"m³ (kub metr) — beton, qazish":"м³ (куб. метр) — бетон, земляные работы","List (varaq) — gipsokarton":"Лист — гипсокартон","Tochka (nuqta) — santexnik, elektrik":"Точка — сантехник, электрик",
+"Kunlik ish":"Дневная работа","Oylik ish":"Месячная работа","Boshqa":"Другое",
+"Ish tugagach, bajarilgan hajmni o'lchab yoki to'g'ridan-to'g'ri yakuniy summani kiritib, hisob-kitobni belgilang.":"После завершения работы укажите итоговую сумму — измерив объём или введя напрямую.",
+"Yakuniy summa hali belgilanmagan — ish tugagach \"Yakuniy hisob-kitob\" tugmasi orqali belgilang.":"Итоговая сумма ещё не определена — укажите её после завершения работы через кнопку «Окончательный расчёт».",
+"Hisoblangan hajm":"Расчётный объём","Yakuniy hisob-kitob saqlandi":"Окончательный расчёт сохранён",
+"Miqdor va narxni to'g'ri kiriting":"Введите корректные количество и цену"
 };
 function t(s){return LANG==='ru'&&RU[s]||s;}
 function translateStatic(){
@@ -2007,10 +2061,10 @@ function initApp(){
   av.textContent=currentUser.avatar;av.className='av '+(currentUser.rol==='prorab'?'av-p':'av-m');
   document.getElementById('headerName').textContent=currentUser.ism;
   document.getElementById('headerRole').textContent=currentUser.rol==='prorab'?'Prorab':'Mijoz';
-  const iconMap={kassa:'ic-wallet',xarajatlar:'ic-receipt',tolovlar:'ic-card',zakaz:'ic-box',ustalar:'ic-tools',obyektlar:'ic-building',profil:'ic-user'};
+  const iconMap={kassa:'ic-wallet',xarajatlar:'ic-receipt',tolovlar:'ic-card',zakaz:'ic-box',obyektlar:'ic-building',profil:'ic-user'};
   const tabs=currentUser.rol==='prorab'
-    ?[{id:'kassa',l:t('Asosiy')},{id:'xarajatlar',l:t('Xarajatlar')},{id:'tolovlar',l:t("To'lovlar")},{id:'zakaz',l:t('Buyurtmalar')},{id:'ustalar',l:t('Ustalar')},{id:'obyektlar',l:t('Obyektlar')},{id:'profil',l:t('Profil')}]
-    :[{id:'kassa',l:t('Asosiy')},{id:'xarajatlar',l:t('Xarajatlar')},{id:'tolovlar',l:t("To'lovlar")},{id:'zakaz',l:t('Buyurtmalar')},{id:'ustalar',l:t('Ustalar')},{id:'profil',l:t('Profil')}];
+    ?[{id:'kassa',l:t('Asosiy')},{id:'xarajatlar',l:t('Xarajatlar')},{id:'tolovlar',l:t("To'lovlar")},{id:'zakaz',l:t('Buyurtmalar')},{id:'obyektlar',l:t('Obyektlar')},{id:'profil',l:t('Profil')}]
+    :[{id:'kassa',l:t('Asosiy')},{id:'xarajatlar',l:t('Xarajatlar')},{id:'tolovlar',l:t("To'lovlar")},{id:'zakaz',l:t('Buyurtmalar')},{id:'profil',l:t('Profil')}];
   document.getElementById('appNav').innerHTML=tabs.map(t=>`<div class="ni${t.id==='kassa'?' on':''}" data-id="${t.id}" onclick="switchView('${t.id}')">${t.l}</div>`).join('');
   document.getElementById('bottomNav').innerHTML=tabs.map(t=>`
     <div class="bn-item${t.id==='kassa'?' on':''}" data-id="${t.id}" onclick="switchView('${t.id}')">
@@ -2211,7 +2265,7 @@ function switchView(id){
   if(id==='xarajatlar')renderXarajatlar();
   if(id==='tolovlar')renderTolovlar();
   if(id==='zakaz')renderZakaz();
-  if(id==='ustalar')renderUstalar();
+  if(id==='xarajatlar'&&xarajatlarTab==='ustalar')renderUstalar();
   if(id==='obyektlar')renderObyektlar();
   if(id==='profil')renderProfil();
   if(id==='chat')initChat();
@@ -2274,8 +2328,8 @@ function renderKassa(){
       return `<div class="ci-sub-zak"><div class="ci-sub-zak-n">${esc(z.nomi)}${overdue?' <span style="color:var(--err);font-weight:700">muddati oshgan (kechikkan)</span>':''}</div><div class="ci-sub-zak-row"><span style="color:var(--t1);font-weight:600">Avans: ${fmt(z.avans)}</span>${zq>0?`<span style="color:var(--t2);font-weight:600">Kerak: ${fmt(zq)}${z.tayyorSana?' ('+z.tayyorSana+' gacha)':''}</span>`:`<span style="color:var(--gold-d)">To'liq berilgan</span>`}</div></div>`;
     }).join('');
     const ustaDetail=!usta.length?'<div class="ci-empty">Usta shartnomasi yo\'q</div>':usta.map(u=>{
-      const tolangan=ustaJamiTolangan(u.id),uq=Math.max(0,u.kelishilganSumma-tolangan);
-      return `<div class="ci-sub-zak"><div class="ci-sub-zak-n">${esc(u.ism)}${u.mutaxassislik?' — '+esc(u.mutaxassislik):''}</div><div class="ci-sub-zak-row"><span style="color:var(--t1);font-weight:600">To'langan: ${fmt(tolangan)}</span>${uq>0?`<span style="color:var(--t2);font-weight:600">Qoldiq: ${fmt(uq)}</span>`:`<span style="color:var(--gold-d)">To'liq to'langan</span>`}</div></div>`;
+      const tolangan=ustaJamiTolangan(u.id),belgilanmagan=!u.kelishilganSumma||u.kelishilganSumma<=0,uq=belgilanmagan?0:Math.max(0,u.kelishilganSumma-tolangan);
+      return `<div class="ci-sub-zak"><div class="ci-sub-zak-n">${esc(u.ism)}${u.mutaxassislik?' — '+esc(u.mutaxassislik):''}</div><div class="ci-sub-zak-row"><span style="color:var(--t1);font-weight:600">To'langan: ${fmt(tolangan)}</span>${belgilanmagan?`<span style="color:var(--t3)">Hisob-kitob kutilmoqda</span>`:uq>0?`<span style="color:var(--t2);font-weight:600">Qoldiq: ${fmt(uq)}</span>`:`<span style="color:var(--gold-d)">To'liq to'langan</span>`}</div></div>`;
     }).join('');
 
     const catRow=(key,label,color,total,detailHtml)=>`
@@ -2385,6 +2439,16 @@ function clearXarFilter(){
   document.getElementById('xfSearch').value='';
   xarFilter={kat:'',subkat:'',from:'',to:'',q:''};
   renderXarajatlar();
+}
+let xarajatlarTab='list';
+function switchXarajatlarTab(tab){
+  xarajatlarTab=tab;
+  document.getElementById('xtSegList').classList.toggle('on',tab==='list');
+  document.getElementById('xtSegUsta').classList.toggle('on',tab==='ustalar');
+  document.getElementById('xarajatlarListWrap').style.display=tab==='list'?'block':'none';
+  document.getElementById('xarajatlarUstaWrap').style.display=tab==='ustalar'?'block':'none';
+  document.getElementById('btnAddXarajat').style.display=tab==='list'?'':'none';
+  if(tab==='ustalar')renderUstalar();
 }
 function renderXarajatlar(){
   let list=getXar();
@@ -2613,21 +2677,25 @@ async function saveUsta(){
   const obyektId=document.getElementById('usObyekt').value;
   const ism=document.getElementById('usIsm').value.trim();
   const mutaxassislik=document.getElementById('usMutaxassislik').value;
-  const kelishilganSumma=money(parseFloat(document.getElementById('usKelishilgan').value));
+  const summaRaw=document.getElementById('usKelishilgan').value;
+  const kelishilganSumma=summaRaw?money(parseFloat(summaRaw)):0; // ixtiyoriy — bo'sh qoldirilsa, keyin "Yakuniy hisob-kitob" orqali belgilanadi
   const boshlanishSana=document.getElementById('usBoshlanish').value;
   const izoh=document.getElementById('usIzoh').value.trim();
   if(!ism){showErr('usError',"Usta ismini kiriting");return;}
-  if(!validSumma(kelishilganSumma)){showErr('usError',"Kelishilgan summani to'g'ri kiriting");return;}
+  if(summaRaw&&!validSumma(kelishilganSumma)){showErr('usError',"Kelishilgan summani to'g'ri kiriting yoki bo'sh qoldiring");return;}
   if(boshlanishSana&&!validSana(boshlanishSana)){showErr('usError',"Sana noto'g'ri");return;}
   if(id){
     const idx=DB.ustalar.findIndex(u=>u.id===id);if(idx===-1)return;
-    const holat=DB.ustalar[idx].holat;
-    const updated={id,obyektId,ism,mutaxassislik,kelishilganSumma,boshlanishSana,holat,izoh};
+    const old=DB.ustalar[idx];
+    // Agar summa qo'lda o'zgartirilgan bo'lsa, avvalgi hajm/narx asosidagi hisobni bekor qilamiz (endi to'g'ridan-to'g'ri summa)
+    const summaChanged=kelishilganSumma!==old.kelishilganSumma;
+    const updated={id,obyektId,ism,mutaxassislik,kelishilganSumma,boshlanishSana,holat:old.holat,izoh,
+      hisobBirligi:summaChanged?null:old.hisobBirligi,hisobMiqdori:summaChanged?null:old.hisobMiqdori,birlikNarxi:summaChanged?null:old.birlikNarxi};
     const{error}=await sb.from('ustalar').update(ustaToRow(updated)).eq('id',id);
     if(error){showErr('usError','Saqlashda xato');return;}
     DB.ustalar[idx]=updated;
   }else{
-    const newU={id:genId('USTA'),obyektId,ism,mutaxassislik,kelishilganSumma,boshlanishSana,holat:'jarayonda',izoh};
+    const newU={id:genId('USTA'),obyektId,ism,mutaxassislik,kelishilganSumma,boshlanishSana,holat:'jarayonda',izoh,hisobBirligi:null,hisobMiqdori:null,birlikNarxi:null};
     const{error}=await sb.from('ustalar').insert(ustaToRow(newU));
     if(error){showErr('usError','Saqlashda xato');return;}
     DB.ustalar.push(newU);
@@ -2680,6 +2748,62 @@ async function saveUstaTolov(){
   notify("To'lov qo'shildi");
   renderUstalar();
 }
+
+// ─── USTA: YAKUNIY HISOB-KITOB (hajm asosida yoki to'g'ridan-to'g'ri) ───
+let ustaYakunMode='direct';
+const USTA_BIRLIK_LABEL={m2:'m²',metr:'metr',pogonniy:'pog.metr',m3:'m³',list:'list',tochka:'nuqta',kun:'kun',oy:'oy',boshqa:'birlik'};
+function switchUstaYakunMode(m){
+  ustaYakunMode=m;
+  document.getElementById('uySegDirect').classList.toggle('on',m==='direct');
+  document.getElementById('uySegCalc').classList.toggle('on',m==='calc');
+  document.getElementById('uyDirectWrap').style.display=m==='direct'?'block':'none';
+  document.getElementById('uyCalcWrap').style.display=m==='calc'?'block':'none';
+}
+function calcUstaYakun(){
+  const miqdor=parseFloat(document.getElementById('uyMiqdor').value)||0;
+  const narx=parseFloat(document.getElementById('uyNarx').value)||0;
+  document.getElementById('uyHisoblangan').value=fmt(money(miqdor*narx));
+}
+function openUstaYakunModal(ustaId){
+  const u=DB.ustalar.find(v=>v.id===ustaId);if(!u)return;
+  document.getElementById('uyUstaId').value=ustaId;
+  document.getElementById('uyError').style.display='none';
+  if(u.hisobBirligi){
+    switchUstaYakunMode('calc');
+    document.getElementById('uyBirlik').value=u.hisobBirligi;
+    document.getElementById('uyMiqdor').value=u.hisobMiqdori||'';
+    document.getElementById('uyNarx').value=u.birlikNarxi||'';
+    calcUstaYakun();
+  }else{
+    switchUstaYakunMode('direct');
+    document.getElementById('uyDirectSumma').value=u.kelishilganSumma||'';
+  }
+  document.getElementById('modalUstaYakun').classList.add('on');
+}
+async function saveUstaYakun(){
+  const ustaId=document.getElementById('uyUstaId').value;
+  const u=DB.ustalar.find(v=>v.id===ustaId);if(!u)return;
+  let kelishilganSumma,hisobBirligi=null,hisobMiqdori=null,birlikNarxi=null;
+  if(ustaYakunMode==='direct'){
+    kelishilganSumma=money(parseFloat(document.getElementById('uyDirectSumma').value));
+  }else{
+    hisobBirligi=document.getElementById('uyBirlik').value;
+    hisobMiqdori=parseFloat(document.getElementById('uyMiqdor').value)||0;
+    birlikNarxi=parseFloat(document.getElementById('uyNarx').value)||0;
+    if(hisobMiqdori<=0||birlikNarxi<=0){showErr('uyError',"Miqdor va narxni to'g'ri kiriting");return;}
+    kelishilganSumma=money(hisobMiqdori*birlikNarxi);
+  }
+  if(!validSumma(kelishilganSumma)){showErr('uyError',"Summani to'g'ri kiriting");return;}
+  const tolangan=ustaJamiTolangan(ustaId);
+  const holat=tolangan>=kelishilganSumma?'tugallangan':'jarayonda';
+  const updated={...u,kelishilganSumma,hisobBirligi,hisobMiqdori,birlikNarxi,holat};
+  const{error}=await sb.from('ustalar').update(ustaToRow(updated)).eq('id',ustaId);
+  if(error){showErr('uyError','Saqlashda xato');return;}
+  Object.assign(u,updated);
+  document.getElementById('modalUstaYakun').classList.remove('on');
+  notify('Yakuniy hisob-kitob saqlandi');
+  renderUstalar();
+}
 async function deleteUstaTolov(id){
   const t=DB.ustaTolovlari.find(v=>v.id===id);if(!t)return;
   const usta=DB.ustalar.find(u=>u.id===t.ustaId);
@@ -2710,9 +2834,11 @@ function renderUstalar(){
     const ob=DB.obyektlar.find(o=>o.id===u.obyektId);
     const tolovlar=ustaTolovlariFor(u.id).slice().sort((a,b)=>b.sana.localeCompare(a.sana));
     const tolangan=tolovlar.reduce((s,t)=>s+t.summa,0);
-    const qoldiq=Math.max(0,u.kelishilganSumma-tolangan);
-    const pct=u.kelishilganSumma>0?Math.min(100,Math.round(tolangan/u.kelishilganSumma*100)):0;
+    const belgilanmagan=!u.kelishilganSumma||u.kelishilganSumma<=0;
+    const qoldiq=belgilanmagan?0:Math.max(0,u.kelishilganSumma-tolangan);
+    const pct=!belgilanmagan?Math.min(100,Math.round(tolangan/u.kelishilganSumma*100)):0;
     const turiLabel={avans:'Avans',yakuniy:'Yakuniy',oddiy:'Oddiy'};
+    const hisobInfo=u.hisobBirligi&&u.hisobMiqdori?`<div class="zk-meta-b"><div class="zk-meta-l">Hisoblangan hajm</div><div class="zk-meta-v">${u.hisobMiqdori} ${USTA_BIRLIK_LABEL[u.hisobBirligi]||''} × ${fmt(u.birlikNarxi)}</div></div>`:'';
     const tolovRows=!tolovlar.length?'<div class="ci-empty">Hali to\'lov yo\'q</div>':tolovlar.map(t=>`
       <div class="ci-sub-zak">
         <div class="ci-sub-zak-n">${t.sana} · <span style="color:var(--gold-d);font-weight:700">${turiLabel[t.turi]||t.turi}</span>${t.izoh?' — '+esc(t.izoh):''}</div>
@@ -2729,15 +2855,17 @@ function renderUstalar(){
           <div class="zk-title">${esc(u.ism)}</div>
           <div class="zk-sub">${esc(u.mutaxassislik||'')}${isP&&ob?' · '+esc(ob.id):''}</div>
         </div>
-        <span class="sb ${u.holat==='tugallangan'?'sb-g':'sb-y'}">${u.holat==='tugallangan'?'Tugallangan':'Jarayonda'}</span>
+        <span class="sb ${belgilanmagan?'sb-y':u.holat==='tugallangan'?'sb-g':'sb-y'}">${belgilanmagan?"Hisob-kitob kutilmoqda":u.holat==='tugallangan'?'Tugallangan':'Jarayonda'}</span>
       </div>
       <div class="zk-body">
         <div class="zk-avans-box"><span class="zk-avans-lbl"><i class="ico"><svg><use href="#ic-wallet"/></svg></i> Jami to'langan</span><span class="zk-avans-val">${fmt(tolangan)}</span></div>
-        ${qoldiq>0?`<div class="zk-remain"><span class="zk-remain-lbl"><i class="ico"><svg><use href="#ic-pin"/></svg></i> Qoldiq summa</span><span class="zk-remain-val">${fmt(qoldiq)}</span></div>`:`<div class="zk-done"><i class="ico"><svg><use href="#ic-check"/></svg></i> To'liq to'langan</div>`}
-        <div class="pg-wrap" style="margin-top:10px"><div class="pg-bar" style="width:${pct}%"></div></div>
+        ${belgilanmagan
+          ?`<div style="font-size:12px;color:var(--t3);margin-top:8px;padding:8px 10px;background:var(--b2);border-radius:8px">Yakuniy summa hali belgilanmagan — ish tugagach "Yakuniy hisob-kitob" tugmasi orqali belgilang.</div>`
+          :qoldiq>0?`<div class="zk-remain"><span class="zk-remain-lbl"><i class="ico"><svg><use href="#ic-pin"/></svg></i> Qoldiq summa</span><span class="zk-remain-val">${fmt(qoldiq)}</span></div>`:`<div class="zk-done"><i class="ico"><svg><use href="#ic-check"/></svg></i> To'liq to'langan</div>`}
+        ${!belgilanmagan?`<div class="pg-wrap" style="margin-top:10px"><div class="pg-bar" style="width:${pct}%"></div></div>`:''}
         <div class="zk-meta-row">
-          <div class="zk-meta-b"><div class="zk-meta-l">Kelishilgan summa</div><div class="zk-meta-v">${fmt(u.kelishilganSumma)}</div></div>
-          <div class="zk-meta-b"><div class="zk-meta-l">Boshlanish sanasi</div><div class="zk-meta-v">${u.boshlanishSana||'—'}</div></div>
+          <div class="zk-meta-b"><div class="zk-meta-l">Kelishilgan summa</div><div class="zk-meta-v">${belgilanmagan?'—':fmt(u.kelishilganSumma)}</div></div>
+          ${hisobInfo||`<div class="zk-meta-b"><div class="zk-meta-l">Boshlanish sanasi</div><div class="zk-meta-v">${u.boshlanishSana||'—'}</div></div>`}
         </div>
         ${u.izoh?`<div style="margin-top:10px;font-size:12px;color:var(--t3);padding:8px 10px;background:var(--b2);border-radius:8px">${esc(u.izoh)}</div>`:''}
         <div class="ci ci-click" onclick="toggleKassaDetail('usta-tol-${u.id}')" style="margin-top:10px">
@@ -2745,8 +2873,9 @@ function renderUstalar(){
           <div class="ca"><span class="ci-arrow" id="ka-usta-tol-${u.id}">▾</span></div>
         </div>
         <div class="ci-detail" id="kd-usta-tol-${u.id}" style="display:none">${tolovRows}</div>
-        ${isP?`<div style="display:flex;gap:8px;margin-top:12px">
-          <button class="btn-save" style="flex:1;padding:8px;font-size:13px" onclick="openUstaTolovModal('${u.id}')">+ To'lov qo'shish</button>
+        ${isP?`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn-save" style="flex:1;padding:8px;font-size:13px;min-width:120px" onclick="openUstaTolovModal('${u.id}')">+ To'lov qo'shish</button>
+          <button class="btn-e" style="flex:1;padding:8px;font-size:13px;min-width:120px" onclick="openUstaYakunModal('${u.id}')">${belgilanmagan?"Yakuniy hisob-kitob":"Hisob-kitobni yangilash"}</button>
           <button class="btn-e" style="padding:8px" onclick="openUstaModal('${u.id}')"><i class="ico"><svg><use href="#ic-edit"/></svg></i></button>
           <button class="btn-d" style="padding:8px 14px" aria-label="Ustani o'chirish" onclick="deleteUsta('${u.id}')"><i class="ico"><svg><use href="#ic-trash"/></svg></i></button>
         </div>`:''}
