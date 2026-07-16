@@ -186,6 +186,8 @@ button:focus-visible,.inp:focus-visible{outline:2px solid var(--gold);outline-of
 
 /* ── STATS ── */
 .sg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.sg-4{grid-template-columns:repeat(4,1fr)}
+.sv-sub{font-size:10px;color:var(--t4);margin-top:3px;line-height:1.3}
 .sc{background:var(--bg);border:1px solid var(--b);border-radius:var(--r2);padding:14px 10px;text-align:center}
 .sc-r{background:var(--err2);border-color:var(--err2)}
 .sc-g{background:var(--ok2);border-color:var(--ok2)}
@@ -350,10 +352,11 @@ textarea.inp{resize:vertical;min-height:80px}
 .onboard-num{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
 .onboard-sub{font-size:12px;color:var(--t3)}
 #langSwitch button.on{background:var(--gold);color:#fff;border-color:var(--gold)}
+.fl-hint{font-size:11px;color:var(--t3);margin-top:5px;line-height:1.4}
 .net-banner{position:fixed;top:0;left:0;right:0;background:#B23A3A;color:#fff;font-size:12.5px;font-weight:600;text-align:center;padding:8px 14px;z-index:1000;transform:translateY(-110%);transition:transform .3s}
 .net-banner.on{transform:translateY(0)}
-.undo-bar{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--ink-solid);border-radius:12px;padding:10px 12px 10px 16px;font-size:13px;color:#fff;z-index:998;transition:transform .3s;box-shadow:var(--sh2);display:flex;align-items:center;gap:14px;white-space:nowrap}
-.undo-bar.on{transform:translateX(-50%) translateY(0)}
+.undo-bar{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(140px);background:var(--ink-solid);border-radius:12px;padding:10px 12px 10px 16px;font-size:13px;color:#fff;z-index:998;transition:transform .3s,opacity .3s;box-shadow:var(--sh2);display:flex;align-items:center;gap:14px;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none}
+.undo-bar.on{transform:translateX(-50%) translateY(0);opacity:1;visibility:visible;pointer-events:auto}
 .undo-btn{background:transparent;border:1px solid rgba(255,255,255,.4);color:var(--gold-l);font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer;min-height:32px}
 .ac-danger{background:#D64545!important}
 .notif{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink-solid);border-radius:var(--r2);padding:10px 18px;font-size:13px;color:#fff;z-index:999;transition:transform .3s;box-shadow:var(--sh2);white-space:nowrap}
@@ -710,6 +713,16 @@ textarea.inp{resize:vertical;min-height:80px}
       <div id="zakazList"></div>
     </div>
 
+    <!-- USTALAR -->
+    <div class="view" id="viewUstalar">
+      <div class="ph">
+        <div><div class="ph-t">Ustalar</div><div class="ph-s">Usta bilan kelishuv, avans va hisob-kitoblar</div></div>
+        <button class="btn-add" id="btnAddUsta" onclick="openUstaModal()">+ Yangi usta</button>
+      </div>
+      <div class="ro-bar" id="ustaReadonly" style="display:none"></div>
+      <div id="ustaList"></div>
+    </div>
+
     <!-- CHAT -->
     <div class="view" id="viewChat" style="margin:-16px">
       <div class="chat-obj-select" id="chatObjSelectWrap" style="display:none">
@@ -787,6 +800,14 @@ textarea.inp{resize:vertical;min-height:80px}
         <button class="btn-cancel" style="width:100%;margin-top:8px" onclick="bildirishnomaniOchirish()">O'chirish</button>
       </div>
       <div class="card">
+        <div class="card-t">Yordam kerakmi?</div>
+        <div class="info-box">Muammo, savol yoki taklif bo'lsa — to'g'ridan-to'g'ri Telegram orqali yozing, tez orada javob beramiz.</div>
+        <a href="https://t.me/visartadmin" target="_blank" rel="noopener" class="btn-save" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.05 3.16L2.28 10.5c-1.2.47-1.2 1.13-.22 1.42l4.8 1.5 1.85 5.68c.22.6.11.85.75.85.5 0 .72-.23 1-.5l2.4-2.32 4.98 3.68c.92.5 1.58.24 1.8-.85l3.27-15.4c.32-1.35-.5-1.96-1.86-1.4zM8.02 13.5l10.4-6.55c.5-.3.94-.14.58.2L9.9 15.1l-.35 3.8-1.53-5.4z"/></svg>
+          Telegram orqali yozish
+        </a>
+      </div>
+      <div class="card">
         <div class="card-t">Xavfsizlik</div>
         <div class="info-box">Telefoningiz yo'qolgan yoki boshqa qurilmada ochiq qolgan bo'lsa, barcha qurilmalardagi sessiyalarni yopishingiz mumkin.</div>
         <button class="btn-cancel" style="width:100%" onclick="signOutAllDevices()">Barcha qurilmalardan chiqish</button>
@@ -830,7 +851,7 @@ textarea.inp{resize:vertical;min-height:80px}
     <div class="ms-body">
       <div class="fg"><label class="fl">Obyekt</label><select class="inp" id="fObyekt" onchange="updateSubkat()"></select></div>
       <div class="fr">
-        <div class="fg"><label class="fl">Kategoriya</label><select class="inp" id="fKategoriya" onchange="updateSubkat()"><option>Qurilish mollari</option><option>Usta haqqi</option><option>Boshqa xarajatlar</option></select></div>
+        <div class="fg"><label class="fl">Kategoriya</label><select class="inp" id="fKategoriya" onchange="updateSubkat()"><option>Qurilish mollari</option><option>Boshqa xarajatlar</option></select></div>
         <div class="fg"><label class="fl">Sub-kategoriya</label><select class="inp" id="fSubkat"></select></div>
       </div>
       <div class="fg">
@@ -842,6 +863,11 @@ textarea.inp{resize:vertical;min-height:80px}
           </button>
         </div>
         <div id="ovozStatus" style="font-size:11.5px;color:var(--t3);margin-top:4px;display:none"></div>
+      </div>
+      <div class="fg" id="fUstaBosqichWrap" style="display:none">
+        <label class="fl">To'lov bosqichi</label>
+        <select class="inp" id="fUstaBosqich" onchange="applyUstaBosqichToIzoh('fUstaBosqich','fIzoh')"></select>
+        <div class="fl-hint">Usta ishi hali tugallanmagan bo'lsa — Avans, ish yakunlanib hisob qilinsa — Yakuniy hisob-kitobni tanlang</div>
       </div>
       <div class="fr3">
         <div class="fg"><label class="fl">O'lchov</label><select class="inp" id="fBirlik"><option>dona</option><option>kg</option><option>metr</option><option>litr</option><option>m²</option><option>m³</option><option>to'plam</option></select></div>
@@ -939,6 +965,43 @@ textarea.inp{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- MODAL: USTA SHARTNOMA (yaratish/tahrirlash) -->
+<div class="mo" id="modalUsta" role="dialog" aria-modal="true">
+  <div class="ms">
+    <div class="ms-hd"><div class="handle"></div><div class="ms-t" id="ustaModalTitle">Yangi Usta</div></div>
+    <div class="ms-body">
+      <input type="hidden" id="usId">
+      <div class="info-box"><i class="ico"><svg><use href="#ic-user"/></svg></i> Usta bilan kelishilgan umumiy summani kiriting. Keyin bergan har bir to'lovingizni (avans, yakuniy hisob-kitob) alohida qo'shib borasiz — qoldiq avtomatik hisoblanadi.</div>
+      <div class="fg"><label class="fl">Obyekt</label><select class="inp" id="usObyekt"></select></div>
+      <div class="fg"><label class="fl">Usta ismi</label><input class="inp" type="text" id="usIsm" placeholder="Aziz aka"></div>
+      <div class="fg"><label class="fl">Mutaxassisligi</label><select class="inp" id="usMutaxassislik"></select></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Kelishilgan summa (so'm)</label><input class="inp" type="number" id="usKelishilgan" placeholder="15 000 000"></div>
+        <div class="fg"><label class="fl">Boshlanish sanasi</label><input class="inp" type="date" id="usBoshlanish"></div>
+      </div>
+      <div class="fg"><label class="fl">Izoh</label><textarea class="inp" id="usIzoh" placeholder="Ish tavsifi, shartlar…"></textarea></div>
+      <div class="lerr" id="usError"></div>
+    </div>
+    <div class="fa"><button class="btn-cancel" onclick="closeModal('usta')">Bekor</button><button class="btn-save" onclick="saveUsta()">Saqlash</button></div>
+  </div>
+</div>
+
+<!-- MODAL: USTAGA TO'LOV QO'SHISH -->
+<div class="mo" id="modalUstaTolov" role="dialog" aria-modal="true">
+  <div class="ms">
+    <div class="ms-hd"><div class="handle"></div><div class="ms-t">To'lov qo'shish</div></div>
+    <div class="ms-body">
+      <input type="hidden" id="utUstaId">
+      <div class="fg"><label class="fl">Sana</label><input class="inp" type="date" id="utSana"></div>
+      <div class="fg"><label class="fl">Summa (so'm)</label><input class="inp" type="number" id="utSumma" placeholder="3 000 000"></div>
+      <div class="fg"><label class="fl">To'lov turi</label><select class="inp" id="utTuri"><option value="avans">Avans (ish tugallanmagan)</option><option value="yakuniy">Yakuniy hisob-kitob (ish tugallangan)</option><option value="oddiy">Oddiy to'lov</option></select></div>
+      <div class="fg"><label class="fl">Izoh</label><textarea class="inp" id="utIzoh" placeholder="Ixtiyoriy…"></textarea></div>
+      <div class="lerr" id="utError"></div>
+    </div>
+    <div class="fa"><button class="btn-cancel" onclick="closeModal('ustaTolov')">Bekor</button><button class="btn-save" onclick="saveUstaTolov()">Saqlash</button></div>
+  </div>
+</div>
+
 <!-- MODAL: OBYEKT YANGI -->
 <div class="mo" id="modalObyekt" role="dialog" aria-modal="true">
   <div class="ms">
@@ -998,6 +1061,10 @@ textarea.inp{resize:vertical;min-height:80px}
         <div class="fg"><label class="fl">Sub-kategoriya</label><select class="inp" id="eXarSubkat"></select></div>
       </div>
       <div class="fg"><label class="fl">Mahsulot nomi</label><input class="inp" type="text" id="eXarMahsulot"></div>
+      <div class="fg" id="eXarUstaBosqichWrap" style="display:none">
+        <label class="fl">To'lov bosqichi</label>
+        <select class="inp" id="eXarUstaBosqich" onchange="applyUstaBosqichToIzoh('eXarUstaBosqich','eXarIzoh')"></select>
+      </div>
       <div class="fr3">
         <div class="fg"><label class="fl">O'lchov</label><select class="inp" id="eXarBirlik"><option>dona</option><option>kg</option><option>metr</option><option>litr</option><option>m²</option><option>m³</option><option>to'plam</option></select></div>
         <div class="fg"><label class="fl">Narxi</label><input class="inp" type="number" id="eXarNarx" oninput="calcEditJami()"></div>
@@ -1258,6 +1325,35 @@ function subkatsForObyektTuri(kat,obyektTuri){
   if(!obyektTuri||obyektTuri==='ikki')return list.map(x=>x.n);
   return list.filter(x=>x.t==='ikki'||x.t===obyektTuri).map(x=>x.n);
 }
+
+// Kategoriya bo'yicha mos o'lchov birliklari — materiallar va usta ishi farqlanadi
+const BIRLIK_OPTIONS={
+  'Usta haqqi':['ish haqi (umumiy)','m²','nuqta','kun','oy'],
+  'Qurilish mollari':['dona','kg','metr','litr','m²','m³','to\'plam'],
+  'Boshqa xarajatlar':['dona','kg','metr','litr','m²','m³','to\'plam','xizmat']
+};
+function fillBirlikSelect(selId,kat,keepVal){
+  const el=document.getElementById(selId);if(!el)return;
+  const opts=BIRLIK_OPTIONS[kat]||BIRLIK_OPTIONS['Qurilish mollari'];
+  const prev=keepVal||el.value;
+  el.innerHTML=opts.map(o=>`<option>${esc(o)}</option>`).join('');
+  if(opts.includes(prev))el.value=prev;
+}
+// "Usta haqqi" tanlanganda to'lov bosqichini tez tanlash (Avans / Yakuniy hisob-kitob / To'liq)
+const TOLOV_BOSQICH=['Avans (ish tugallanmagan)',"Yakuniy hisob-kitob (ish tugallangan)","To'liq to'lov"];
+function toggleUstaBosqichUI(kat,wrapId,selId,izohId){
+  const wrap=document.getElementById(wrapId);if(!wrap)return;
+  wrap.style.display=kat==='Usta haqqi'?'block':'none';
+  const sel=document.getElementById(selId);
+  if(sel&&!sel.dataset.filled){sel.innerHTML='<option value="">— tanlanmagan —</option>'+TOLOV_BOSQICH.map(o=>`<option>${esc(o)}</option>`).join('');sel.dataset.filled='1';}
+}
+function applyUstaBosqichToIzoh(selId,izohId){
+  const sel=document.getElementById(selId),izoh=document.getElementById(izohId);
+  if(!sel||!izoh||!sel.value)return;
+  const tag=`[${sel.value}] `;
+  if(!izoh.value.startsWith('['))izoh.value=tag+izoh.value;
+  else izoh.value=izoh.value.replace(/^\[[^\]]*\]\s*/,tag);
+}
 const KOMPANIYA_KOD='VISART-2024';
 
 // ── SUPABASE ULANISH ──
@@ -1292,6 +1388,10 @@ function zakRow(r){return{id:r.id,obyektId:r.obyekt_id,nomi:r.nomi,turi:r.turi,t
 function zakToRow(z){return{id:z.id,obyekt_id:z.obyektId,nomi:z.nomi,turi:z.turi,taminotchi:z.taminotchi,umumiy:z.umumiy,avans:z.avans,sana:z.sana,tayyor_sana:z.tayyorSana||null,holat:z.holat,izoh:z.izoh,kompaniya_id:currentUser.kompaniyaId};}
 function xizRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,summa:Number(r.summa),izoh:r.izoh};}
 function xizToRow(x){return{id:x.id,obyekt_id:x.obyektId,sana:x.sana,summa:x.summa,izoh:x.izoh,kompaniya_id:currentUser.kompaniyaId};}
+function ustaRow(r){return{id:r.id,obyektId:r.obyekt_id,ism:r.ism,mutaxassislik:r.mutaxassislik,kelishilganSumma:Number(r.kelishilgan_summa),boshlanishSana:r.boshlanish_sana,holat:r.holat,izoh:r.izoh};}
+function ustaToRow(u){return{id:u.id,obyekt_id:u.obyektId,ism:u.ism,mutaxassislik:u.mutaxassislik,kelishilgan_summa:u.kelishilganSumma,boshlanish_sana:u.boshlanishSana||null,holat:u.holat,izoh:u.izoh,kompaniya_id:currentUser.kompaniyaId};}
+function ustaTolRow(r){return{id:r.id,ustaId:r.usta_id,obyektId:r.obyekt_id,sana:r.sana,summa:Number(r.summa),turi:r.turi,izoh:r.izoh};}
+function ustaTolToRow(t){return{id:t.id,usta_id:t.ustaId,obyekt_id:t.obyektId,sana:t.sana,summa:t.summa,turi:t.turi,izoh:t.izoh,kompaniya_id:currentUser.kompaniyaId};}
 
 async function loadDB(){
   // Mijoz faqat o'z obyektini oladi — trafik va sizib chiqishni kamaytiradi (RLS server tomonda asosiy himoya)
@@ -1302,18 +1402,25 @@ async function loadDB(){
   const TO_COLS='id,obyekt_id,sana,summa,turi,izoh';
   const ZA_COLS='id,obyekt_id,nomi,turi,taminotchi,umumiy,avans,sana,tayyor_sana,holat,izoh';
   const XZ_COLS='id,obyekt_id,sana,summa,izoh';
-  const [ob,xa,to,za,xz]=await Promise.all([
+  const US_COLS='id,obyekt_id,ism,mutaxassislik,kelishilgan_summa,boshlanish_sana,holat,izoh';
+  const UT_COLS='id,usta_id,obyekt_id,sana,summa,turi,izoh';
+  const [ob,xa,to,za,xz,us,ut]=await Promise.all([
     mine?sb.from('obyektlar').select(OB_COLS).eq('id',mine):sb.from('obyektlar').select(OB_COLS),
     f(sb.from('xarajatlar').select(XA_COLS).order('sana',{ascending:false}).limit(2000)),
     f(sb.from('tolovlar').select(TO_COLS).order('sana',{ascending:false}).limit(2000)),
     f(sb.from('zakazlar').select(ZA_COLS).limit(1000)),
-    f(sb.from('xizmat_tolovlar').select(XZ_COLS).limit(1000))
+    f(sb.from('xizmat_tolovlar').select(XZ_COLS).limit(1000)),
+    f(sb.from('ustalar').select(US_COLS).limit(1000)),
+    f(sb.from('usta_tolovlari').select(UT_COLS).order('sana',{ascending:false}).limit(2000))
   ]);
-  if(ob.error||xa.error||to.error||za.error){notify('Bazadan yuklashda xato — internetni yoki Supabase sozlamalarini tekshiring');console.error(ob.error||xa.error||to.error||za.error);return{obyektlar:[],xarajatlar:[],tolovlar:[],zakazlar:[],xizmatTolovlar:[]};}
-  return{obyektlar:(ob.data||[]).map(obRow),xarajatlar:(xa.data||[]).map(xarRow),tolovlar:(to.data||[]).map(tolRow),zakazlar:(za.data||[]).map(zakRow),xizmatTolovlar:xz.error?[]:(xz.data||[]).map(xizRow)};
+  if(ob.error||xa.error||to.error||za.error){notify('Bazadan yuklashda xato — internetni yoki Supabase sozlamalarini tekshiring');console.error(ob.error||xa.error||to.error||za.error);return{obyektlar:[],xarajatlar:[],tolovlar:[],zakazlar:[],xizmatTolovlar:[],ustalar:[],ustaTolovlari:[]};}
+  return{obyektlar:(ob.data||[]).map(obRow),xarajatlar:(xa.data||[]).map(xarRow),tolovlar:(to.data||[]).map(tolRow),zakazlar:(za.data||[]).map(zakRow),xizmatTolovlar:xz.error?[]:(xz.data||[]).map(xizRow),ustalar:us.error?[]:(us.data||[]).map(ustaRow),ustaTolovlari:ut.error?[]:(ut.data||[]).map(ustaTolRow)};
 }
 let _refreshSeq=0;
 async function refreshDB(){const seq=++_refreshSeq;const d=await loadDB();if(seq===_refreshSeq)DB=d;} // eski javob yangisini yozmasin (race guard)
+function getUstalar(){const ids=getObs().map(o=>o.id);return DB.ustalar.filter(u=>ids.includes(u.obyektId));}
+function ustaTolovlariFor(ustaId){return DB.ustaTolovlari.filter(t=>t.ustaId===ustaId);}
+function ustaJamiTolangan(ustaId){return ustaTolovlariFor(ustaId).reduce((s,t)=>s+t.summa,0);}
 
 function openXizmatAvans(obId){
   document.getElementById('xizObyektId').value=obId;
@@ -1416,7 +1523,7 @@ async function loadChat(){const ids=getObs().map(o=>o.id);if(!ids.length)return{
 async function insertChatMsg(obId,from,fromName,text){return sb.from('chat_xabarlar').insert({obyekt_id:obId,from_login:from,from_ism:fromName,matn:text,oqilgan:false,kompaniya_id:currentUser.kompaniyaId});}
 async function markChatRead(rowIds){if(!rowIds.length)return;return sb.from('chat_xabarlar').update({oqilgan:true}).in('id',rowIds);}
 
-let DB={obyektlar:[],xarajatlar:[],tolovlar:[],zakazlar:[],xizmatTolovlar:[]},currentUser=null,activeView='kassa',currentChatObj=null;
+let DB={obyektlar:[],xarajatlar:[],tolovlar:[],zakazlar:[],xizmatTolovlar:[],ustalar:[],ustaTolovlari:[]},currentUser=null,activeView='kassa',currentChatObj=null;
 
 // ── Real vaqtda sinxronlash: boshqa foydalanuvchi ma'lumot kiritsa, ekran o'zi yangilanadi ──
 // ─── BROWSER PUSH-BILDIRISHNOMA ───
@@ -1583,6 +1690,14 @@ function subscribeRealtime(){
       if(!myCompanyEvent(p.new||p.old))return;
       applyRowEvent(DB.zakazlar,zakRow,p);scheduleRerender();
     })
+    .on('postgres_changes',{event:'*',schema:'public',table:'ustalar'},(p)=>{
+      if(!myCompanyEvent(p.new||p.old))return;
+      applyRowEvent(DB.ustalar,ustaRow,p);scheduleRerender();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'usta_tolovlari'},(p)=>{
+      if(!myCompanyEvent(p.new||p.old))return;
+      applyRowEvent(DB.ustaTolovlari,ustaTolRow,p);scheduleRerender();
+    })
     .on('postgres_changes',{event:'*',schema:'public',table:'xarajatlar'},(payload)=>{
       const r=payload.new;
       if(!myCompanyEvent(r||payload.old))return;
@@ -1662,7 +1777,47 @@ const RU={
 "Tahrir":"Изм.","Tahrirlash":"Редактировать","ta yozuv":"записей","ta to'lov":"платежей",
 "Umumiy narx":"Общая цена","Berilgan avans":"Внесённый аванс","Qoldiq summa":"Остаток","Tayyor bo'lish sanasi":"Дата готовности","jarayonda":"в процессе","tayyor":"готово","olindi":"получен",
 "Kompaniyalar":"Компании","Foydalanuvchilar":"Пользователи","Yuklanmoqda...":"Загрузка...",
-"Internet aloqasi uzildi — o'zgarishlar saqlanmasligi mumkin":"Нет подключения к интернету — изменения могут не сохраниться"
+"Internet aloqasi uzildi — o'zgarishlar saqlanmasligi mumkin":"Нет подключения к интернету — изменения могут не сохраниться",
+"Xush kelibsiz! 3 qadamda boshlang:":"Добро пожаловать! Начните с 3 шагов:",
+"Obyekt yarating":"Создайте объект","Qurilish loyihangiz — nomi, mijoz ismi va smetasi":"Ваш строительный проект — название, имя клиента и смета",
+"Mijozga login bering":"Дайте клиенту логин","Obyekt kartasidan mijoz akkauntini yaratasiz":"Аккаунт клиента создаётся из карточки объекта",
+"Xarajat va to'lovlarni kiriting":"Вносите расходы и платежи","Mijoz o'z telefonida jonli ko'rib boradi":"Клиент видит всё в реальном времени на своём телефоне",
+"+ Birinchi obyektni yaratish":"+ Создать первый объект","+ Birinchi xarajatni qo'shish":"+ Добавить первый расход","+ Birinchi to'lovni qo'shish":"+ Добавить первый платёж",
+"Prorab":"Прораб","Mijoz":"Клиент","Superadmin":"Суперадмин",
+"QURILISH HISOBOTI":"СТРОИТЕЛЬНЫЙ ОТЧЁТ","ARXITEKTURA DIZAYN XIZMATLARI":"АРХИТЕКТУРНО-ДИЗАЙНЕРСКИЕ УСЛУГИ",
+"Excel":"Excel","To'langan:":"Оплачено:","Sanadan":"С даты","Sanagacha":"По дату",
+"Taxminiy kutilayotgan smeta:":"Ориентировочная смета:","Smetadan qoldi:":"Остаток от сметы:",
+"Umumiy xarajat":"Общий расход","Buyurtma mahsulotlar (avans)":"Заказанные товары (аванс)","Boshqa xarajatlar":"Прочие расходы",
+"boshlangan:":"начало:","Faol":"Активный","Tugatilgan":"Завершён","jarayonda":"в процессе",
+"Mualliflik nazorati xizmat haqqi":"Оплата за авторский надзор","Olingan":"Получено","Qoldiq":"Остаток",
+"Kirish yoki parolda xatolik":"Ошибка в логине или пароле","Login yoki parol noto'g'ri":"Неверный логин или пароль",
+"Yangi obyekt":"Новый объект","Obyekt nomi":"Название объекта","Mijoz ismi":"Имя клиента","Maydon (m²)":"Площадь (м²)","Boshlanish sanasi":"Дата начала",
+"Yangi xarajat":"Новый расход","Yangi to'lov":"Новый платёж","Yangi buyurtma":"Новый заказ","Kategoriya":"Категория","Mahsulot":"Товар","Birlik":"Ед. изм.","Narx":"Цена","Miqdor":"Кол-во","Jami":"Итого","Izoh":"Комментарий","Summa":"Сумма","Sana":"Дата","To'lov turi":"Тип платежа","Chek rasmi":"Фото чека",
+"Xarajatni tahrirlash":"Редактировать расход","Buyurtmani tahrirlash":"Редактировать заказ",
+"To'lov bosqichi":"Этап оплаты","— tanlanmagan —":"— не выбрано —",
+"Avans (ish tugallanmagan)":"Аванс (работа не завершена)","Yakuniy hisob-kitob (ish tugallangan)":"Окончательный расчёт (работа завершена)","To'liq to'lov":"Полная оплата",
+"Usta ishi hali tugallanmagan bo'lsa — Avans, ish yakunlanib hisob qilinsa — Yakuniy hisob-kitobni tanlang":"Если работа мастера ещё не завершена — выберите Аванс, если завершена и производится расчёт — Окончательный расчёт",
+"ish haqi (umumiy)":"оплата труда (общая)","nuqta":"точка","kun":"день","oy":"месяц","xizmat":"услуга",
+"Kategoriya":"Категория","Sub-kategoriya":"Подкатегория","O'lchov":"Ед. изм.","Narxi":"Цена","Miqdori":"Кол-во","Jami — avtomatik":"Итого — авто",
+"Mahsulot / Xizmat nomi":"Название товара / услуги","Chek rasmlari (ixtiyoriy, bir nechta)":"Фото чеков (необязательно, несколько)","Kamera":"Камера","Galereya":"Галерея","Izoh (ixtiyoriy)":"Комментарий (необязательно)",
+"Yordam kerakmi?":"Нужна помощь?","Muammo, savol yoki taklif bo'lsa — to'g'ridan-to'g'ri Telegram orqali yozing, tez orada javob beramiz.":"Если есть проблема, вопрос или предложение — напишите напрямую в Telegram, мы скоро ответим.","Telegram orqali yozish":"Написать в Telegram",
+"Telefoningiz yo'qolgan yoki boshqa qurilmada ochiq qolgan bo'lsa, barcha qurilmalardagi sessiyalarni yopishingiz mumkin.":"Если телефон утерян или сессия осталась открытой на другом устройстве, вы можете закрыть все сессии.","Barcha qurilmalarda (shu jumladan bu yerda) sessiya yopiladi va qayta kirish kerak bo'ladi. Davom etasizmi?":"Сессия будет закрыта на всех устройствах (включая это), понадобится повторный вход. Продолжить?","Barcha qurilmalardan chiqildi":"Выполнен выход со всех устройств",
+"Juda ko'p noto'g'ri urinish. 15 daqiqadan keyin qayta urining.":"Слишком много неверных попыток. Повторите через 15 минут.",
+"Kodni tahrirlash":"Изменить код","Faollashtirish":"Активировать","Bloklash":"Заблокировать","Kompaniyani butunlay o'chirish":"Удалить компанию полностью",
+"Davom etish":"Продолжить","Ha, butunlay o'chirish":"Да, удалить полностью","Kompaniya butunlay o'chirildi":"Компания полностью удалена",
+"Ustalar":"Мастера","Usta bilan kelishuv, avans va hisob-kitoblar":"Договорённость с мастером, авансы и расчёты","+ Yangi usta":"+ Новый мастер",
+"Yangi Usta":"Новый мастер","Ustani Tahrirlash":"Редактировать мастера","Usta ismi":"Имя мастера","Mutaxassisligi":"Специальность","Kelishilgan summa (so'm)":"Согласованная сумма (сум)","Boshlanish sanasi":"Дата начала",
+"Usta bilan kelishilgan umumiy summani kiriting. Keyin bergan har bir to'lovingizni (avans, yakuniy hisob-kitob) alohida qo'shib borasiz — qoldiq avtomatik hisoblanadi.":"Укажите общую сумму, согласованную с мастером. Затем добавляйте каждый платёж (аванс, окончательный расчёт) отдельно — остаток считается автоматически.",
+"To'lov qo'shish":"Добавить платёж","Summa (so'm)":"Сумма (сум)","To'lov turi":"Тип платежа","Avans (ish tugallanmagan)":"Аванс (работа не завершена)","Yakuniy hisob-kitob (ish tugallangan)":"Окончательный расчёт (работа завершена)","Oddiy to'lov":"Обычный платёж",
+"Hali usta shartnomasi yo'q":"Пока нет договора с мастером","+ Birinchi ustani qo'shish":"+ Добавить первого мастера",
+"Jami to'langan":"Всего оплачено","Qoldiq summa":"Остаток","To'liq to'langan":"Полностью оплачено","Kelishilgan summa":"Согласованная сумма","To'lovlar tarixi":"История платежей","Hali to'lov yo'q":"Платежей ещё нет",
+"Jarayonda":"В процессе","Tugallangan":"Завершено",
+"\"Kompaniyani Tahrirlash\"":"Редактировать компанию",
+"Ustani o'chirish":"Удалить мастера",
+"Usta ismini kiriting":"Введите имя мастера","Kelishilgan summani to'g'ri kiriting":"Введите корректную согласованную сумму","Summani to'g'ri kiriting":"Введите корректную сумму",
+"To'lov qo'shildi":"Платёж добавлен",
+"Muallif nazorati":"Авторский надзор","Bu summa umumiy xarajatga qo'shilmaydi — alohida hisoblanadi":"Эта сумма не входит в общий расход — учитывается отдельно",
+"Buyurtma mahsulotlar":"Заказанные товары","qoldiq:":"остаток:"
 };
 function t(s){return LANG==='ru'&&RU[s]||s;}
 function translateStatic(){
@@ -1778,7 +1933,10 @@ async function doLogin(){
   if(!login||!pass){showErr('loginError','Login va parolni kiriting');return;}
   const btn=document.getElementById('loginBtn');if(btn){btn.disabled=true;btn.textContent='Kirilmoqda...';}
   try{
+    const check=await callManageAuth('check_login_allowed',{login});
+    if(!check.ok){showErr('loginError',check.error||"Juda ko'p urinish");return;}
     const{data,error}=await sb.auth.signInWithPassword({email:toAuthEmail(login),password:pass});
+    callManageAuth('record_login_result',{login,success:!error});
     if(error||!data.user){showErr('loginError',"Login yoki parol noto'g'ri");return;}
     const ok=await loadCurrentProfile();
     if(!ok){showErr('loginError','Profil topilmadi — administratorga murojaat qiling');await sb.auth.signOut();return;}
@@ -1849,10 +2007,10 @@ function initApp(){
   av.textContent=currentUser.avatar;av.className='av '+(currentUser.rol==='prorab'?'av-p':'av-m');
   document.getElementById('headerName').textContent=currentUser.ism;
   document.getElementById('headerRole').textContent=currentUser.rol==='prorab'?'Prorab':'Mijoz';
-  const iconMap={kassa:'ic-wallet',xarajatlar:'ic-receipt',tolovlar:'ic-card',zakaz:'ic-box',obyektlar:'ic-building',profil:'ic-user'};
+  const iconMap={kassa:'ic-wallet',xarajatlar:'ic-receipt',tolovlar:'ic-card',zakaz:'ic-box',ustalar:'ic-tools',obyektlar:'ic-building',profil:'ic-user'};
   const tabs=currentUser.rol==='prorab'
-    ?[{id:'kassa',l:t('Asosiy')},{id:'xarajatlar',l:t('Xarajatlar')},{id:'tolovlar',l:t("To'lovlar")},{id:'zakaz',l:t('Buyurtmalar')},{id:'obyektlar',l:t('Obyektlar')},{id:'profil',l:t('Profil')}]
-    :[{id:'kassa',l:t('Asosiy')},{id:'xarajatlar',l:t('Xarajatlar')},{id:'tolovlar',l:t("To'lovlar")},{id:'zakaz',l:t('Buyurtmalar')},{id:'profil',l:t('Profil')}];
+    ?[{id:'kassa',l:t('Asosiy')},{id:'xarajatlar',l:t('Xarajatlar')},{id:'tolovlar',l:t("To'lovlar")},{id:'zakaz',l:t('Buyurtmalar')},{id:'ustalar',l:t('Ustalar')},{id:'obyektlar',l:t('Obyektlar')},{id:'profil',l:t('Profil')}]
+    :[{id:'kassa',l:t('Asosiy')},{id:'xarajatlar',l:t('Xarajatlar')},{id:'tolovlar',l:t("To'lovlar")},{id:'zakaz',l:t('Buyurtmalar')},{id:'ustalar',l:t('Ustalar')},{id:'profil',l:t('Profil')}];
   document.getElementById('appNav').innerHTML=tabs.map(t=>`<div class="ni${t.id==='kassa'?' on':''}" data-id="${t.id}" onclick="switchView('${t.id}')">${t.l}</div>`).join('');
   document.getElementById('bottomNav').innerHTML=tabs.map(t=>`
     <div class="bn-item${t.id==='kassa'?' on':''}" data-id="${t.id}" onclick="switchView('${t.id}')">
@@ -1911,7 +2069,25 @@ async function renderSuperadminKompaniyalar(){
         <button class="btn-e" style="flex:1" onclick="openKompaniyaTahrirModal('${k.id}','${esc(k.nomi).replace(/'/g,"\\'")}','${esc(k.kod)}')">Kodni tahrirlash</button>
         <button class="btn-e" style="flex:1" onclick="toggleSuperadminKompaniya('${k.id}',${!k.faol})">${k.faol?"Bloklash":"Faollashtirish"}</button>
       </div>
+      <button class="btn-danger" style="width:100%;margin-top:8px" onclick="deleteSuperadminKompaniya('${k.id}','${esc(k.nomi).replace(/'/g,"\\'")}',${k.prorab_soni},${k.mijoz_soni},${k.obyekt_soni})">Kompaniyani butunlay o'chirish</button>
     </div>`).join('');
+}
+
+async function deleteSuperadminKompaniya(id,nomi,prorabSoni,mijozSoni,obyektSoni){
+  const ok1=await askConfirm(
+    `"${nomi}" kompaniyasini butunlay o'chirmoqchimisiz? Bu kompaniyada ${prorabSoni} prorab, ${mijozSoni} mijoz, ${obyektSoni} obyekt bor — HAMMASI (xarajat, to'lov, chat, login/parollar bilan birga) qaytarib bo'lmas tarzda o'chiriladi.`,
+    {danger:true,okText:"Davom etish"}
+  );
+  if(!ok1)return;
+  const ok2=await askConfirm(
+    `SO'NGGI TASDIQ: "${nomi}" ni o'chirishga rozimisiz? Bu amalni ORTGA QAYTARIB BO'LMAYDI.`,
+    {danger:true,okText:"Ha, butunlay o'chirish"}
+  );
+  if(!ok2)return;
+  const res=await callManageAuth('superadmin_delete_company',{kompaniyaId:id});
+  if(!res.ok){notify(res.error||'Xato yuz berdi');return;}
+  notify("Kompaniya butunlay o'chirildi");
+  renderSuperadminKompaniyalar();
 }
 
 function openKompaniyaTahrirModal(id,nomi,kod){
@@ -2035,11 +2211,13 @@ function switchView(id){
   if(id==='xarajatlar')renderXarajatlar();
   if(id==='tolovlar')renderTolovlar();
   if(id==='zakaz')renderZakaz();
+  if(id==='ustalar')renderUstalar();
   if(id==='obyektlar')renderObyektlar();
   if(id==='profil')renderProfil();
   if(id==='chat')initChat();
   if(id==='kompaniyalar')renderSuperadminKompaniyalar();
   if(id==='foydalanuvchilar')renderSuperadminFoydalanuvchilar();
+  setTimeout(translateStatic,50); // dinamik render matnlarini ham tarjima qilish
 }
 
 // ─── KASSA ───
@@ -2065,20 +2243,25 @@ function renderKassa(){
     const xar=DB.xarajatlar.filter(x=>x.obyektId===ob.id);
     const tol=DB.tolovlar.filter(t=>t.obyektId===ob.id);
     const zak=DB.zakazlar.filter(z=>z.obyektId===ob.id);
+    const usta=DB.ustalar.filter(u=>u.obyektId===ob.id);
+    const ustaTolList=DB.ustaTolovlari.filter(t=>usta.some(u=>u.id===t.ustaId));
     const jXarajat=xar.reduce((s,x)=>s+x.jami,0),jT=tol.reduce((s,t)=>s+t.summa,0);
     const jZakAvans=zak.reduce((s,z)=>s+(Number(z.avans)||0),0);
-    const jX=jXarajat+jZakAvans; // Buyurtmalarga berilgan avans ham real xarajat hisoblanadi
+    const jUstaTolov=ustaTolList.reduce((s,t)=>s+t.summa,0);
+    const jX=jXarajat+jZakAvans+jUstaTolov; // Buyurtma avansi va usta to'lovlari ham real xarajat hisoblanadi
     const zakQoldiq=zak.reduce((s,z)=>s+(z.umumiy-z.avans),0);
-    const q=jT-jX,pct=jX>0?Math.min(100,Math.round(jT/jX*100)):0;
-    const ql=q<0?'sv-debt':q>0?'sv-credit':'sv-p';
-    const qt=q<0?`Xozirda mavjud qarzdorlik: ${fmt(Math.abs(q))}`:q>0?`Xozirda qoldiq summa: ${fmt(q)}`:'Baravarda';
-    const qr=xar.filter(x=>x.kat==='Qurilish mollari'||x.kat==='Uy qurilishi').reduce((s,x)=>s+x.jami,0);
-    const qu=xar.filter(x=>x.kat==='Usta haqqi').reduce((s,x)=>s+x.jami,0);
-    const qb=xar.filter(x=>x.kat==='Boshqa xarajatlar').reduce((s,x)=>s+x.jami,0);
+    const ustaQoldiq=usta.reduce((s,u)=>s+Math.max(0,u.kelishilganSumma-ustaJamiTolangan(u.id)),0);
     const xizList=DB.xizmatTolovlar.filter(z=>z.obyektId===ob.id);
     const xizOlingan=xizList.reduce((s,z)=>s+z.summa,0);
     const xizUmumiy=xizmatHaqqiUmumiy(ob,jX);
     const xizQoldiq=xizUmumiy-xizOlingan;
+    // Mualliflik nazorati uchun olingan avans ham mijoz to'lovi hisobidan ayriladi
+    const q=jT-jX-xizOlingan,pct=jX>0?Math.min(100,Math.round(jT/jX*100)):0;
+    const ql=q<0?'sv-debt':q>0?'sv-credit':'sv-p';
+    const qt=q<0?`Xozirda mavjud qarzdorlik: ${fmt(Math.abs(q))}`:q>0?`Xozirda qoldiq summa: ${fmt(q)}`:'Baravarda';
+    const qr=xar.filter(x=>x.kat==='Qurilish mollari'||x.kat==='Uy qurilishi').reduce((s,x)=>s+x.jami,0);
+    const qu=xar.filter(x=>x.kat==='Usta haqqi').reduce((s,x)=>s+x.jami,0); // eski (legacy) yozuvlar
+    const qb=xar.filter(x=>x.kat==='Boshqa xarajatlar').reduce((s,x)=>s+x.jami,0);
 
     const subDetail=kat=>{
       const rows=subkatBreakdown(xar,kat);
@@ -2089,6 +2272,10 @@ function renderKassa(){
       const zq=z.umumiy-z.avans;
       const overdue=z.tayyorSana&&z.tayyorSana<today()&&!['Yetkazildi','Ornatildi'].includes(z.holat);
       return `<div class="ci-sub-zak"><div class="ci-sub-zak-n">${esc(z.nomi)}${overdue?' <span style="color:var(--err);font-weight:700">muddati oshgan (kechikkan)</span>':''}</div><div class="ci-sub-zak-row"><span style="color:var(--t1);font-weight:600">Avans: ${fmt(z.avans)}</span>${zq>0?`<span style="color:var(--t2);font-weight:600">Kerak: ${fmt(zq)}${z.tayyorSana?' ('+z.tayyorSana+' gacha)':''}</span>`:`<span style="color:var(--gold-d)">To'liq berilgan</span>`}</div></div>`;
+    }).join('');
+    const ustaDetail=!usta.length?'<div class="ci-empty">Usta shartnomasi yo\'q</div>':usta.map(u=>{
+      const tolangan=ustaJamiTolangan(u.id),uq=Math.max(0,u.kelishilganSumma-tolangan);
+      return `<div class="ci-sub-zak"><div class="ci-sub-zak-n">${esc(u.ism)}${u.mutaxassislik?' — '+esc(u.mutaxassislik):''}</div><div class="ci-sub-zak-row"><span style="color:var(--t1);font-weight:600">To'langan: ${fmt(tolangan)}</span>${uq>0?`<span style="color:var(--t2);font-weight:600">Qoldiq: ${fmt(uq)}</span>`:`<span style="color:var(--gold-d)">To'liq to'langan</span>`}</div></div>`;
     }).join('');
 
     const catRow=(key,label,color,total,detailHtml)=>`
@@ -2107,13 +2294,15 @@ function renderKassa(){
           <button class="btn-e" style="padding:6px 10px;font-size:12px" onclick="exportObyektPDF('${ob.id}')"><i class="ico"><svg><use href="#ic-file-text"/></svg></i> Hisobot</button><button class="btn-e" style="padding:6px 10px;font-size:12px" onclick="exportObyektExcel('${ob.id}')"><i class="ico"><svg><use href="#ic-download"/></svg></i> Excel</button>
         </div>
       </div>
-      <div class="sg">
-        <div class="sc"><div class="sl">Xarajat</div><div class="sv sv-r">${(jX/1000000).toFixed(2)}</div><div class="su">mln soʻm</div></div>
+      <div class="sg${ob.xizmatTuri!=='yoq'?' sg-4':''}">
         <div class="sc"><div class="sl">To'lov</div><div class="sv sv-g">${(jT/1000000).toFixed(2)}</div><div class="su">mln soʻm</div></div>
+        <div class="sc"><div class="sl">Xarajat</div><div class="sv sv-r">${(jX/1000000).toFixed(2)}</div><div class="su">mln soʻm</div></div>
+        ${ob.xizmatTuri!=='yoq'?`<div class="sc"><div class="sl">Muallif nazorati</div><div class="sv" style="color:var(--gold-d)">${(xizOlingan/1000000).toFixed(2)}</div><div class="su">mln soʻm</div><div class="sv-sub">qoldiq: ${fmt(xizQoldiq)}</div></div>`:''}
         <div class="sc ${q<0?'sc-r':q>0?'sc-g':''}"><div class="sl">Qoldiq</div><div class="sv ${ql}">${(Math.abs(q)/1000000).toFixed(2)}</div><div class="su">${q<0?'mavjud qarzdorlik':q>0?'qoldiq summa':'teng'}</div></div>
       </div>
       <div class="pg-wrap"><div class="pg-bar" style="width:${pct}%"></div></div>
       <div class="pg-lbl"><span>To'langan: ${pct}%</span><span>${qt}</span></div>
+      <div style="margin-top:12px;padding:10px 12px;background:var(--b2);border-radius:var(--r2);font-size:12px;color:var(--t3)"><i class="ico"><svg><use href="#ic-user"/></svg></i> ${esc(ob.mijozIsm)} · boshlangan: ${esc(ob.sana)}</div>
       ${ob.smeta>0?(()=>{
         const sp=Math.min(100,Math.round(jX/ob.smeta*100));
         const over=jX>ob.smeta;
@@ -2141,13 +2330,14 @@ function renderKassa(){
         </div>`;
       })():''}
       ${zakQoldiq>0?`<div class="zk-remain" style="margin-top:12px"><span class="zk-remain-lbl"><i class="ico"><svg><use href="#ic-box"/></svg></i> Buyurtmalar bo'yicha kutilayotgan to'lov</span><span class="zk-remain-val">${fmt(zakQoldiq)}</span></div>`:''}
+      ${ustaQoldiq>0?`<div class="zk-remain" style="margin-top:8px"><span class="zk-remain-lbl"><i class="ico"><svg><use href="#ic-user"/></svg></i> Ustalarga qolgan to'lov</span><span class="zk-remain-val">${fmt(ustaQoldiq)}</span></div>`:''}
       <div class="cl">
         ${catRow('qurilish','Qurilish mollari','#B08D57',qr,subDetail('Qurilish mollari'))}
-        ${catRow('usta','Usta haqqi','#8C6D3F',qu,subDetail('Usta haqqi'))}
+        ${qu>0?catRow('usta-eski',"Usta haqqi (eski yozuvlar)",'#8C6D3F',qu,subDetail('Usta haqqi')):''}
+        ${catRow('ustalar','<i class="ico"><svg><use href="#ic-user"/></svg></i> Ustalarga to\'langan','#8C6D3F',jUstaTolov,ustaDetail)}
         ${catRow('boshqa','Boshqa xarajatlar','#A39D8E',qb,subDetail('Boshqa xarajatlar'))}
-        ${catRow('buyurtma','<i class="ico"><svg><use href="#ic-box"/></svg></i> Buyurtma mahsulotlar (avans)','#C9A96E',jZakAvans,zakDetail)}
+        ${catRow('buyurtma',"Buyurtma mahsulotlar",'#C9A96E',jZakAvans,zakDetail)}
       </div>
-      <div style="margin-top:12px;padding:10px 12px;background:var(--b2);border-radius:var(--r2);font-size:12px;color:var(--t3)"><i class="ico"><svg><use href="#ic-user"/></svg></i> ${esc(ob.mijozIsm)} · boshlangan: ${esc(ob.sana)}</div>
       ${ob.xizmatTuri!=='yoq'?`
       <div class="xiz-box xiz-box-subtle">
         <div class="xiz-top">
@@ -2155,6 +2345,7 @@ function renderKassa(){
           <span class="xiz-tur">${ob.xizmatTuri==='foiz'?ob.xizmatFoiz+"% umumiy summadan":fmt(ob.xizmatOylik)+'/oy'}</span>
         </div>
         <div class="xiz-umumiy">Umumiy (ayni paytgacha): <b>${fmt(xizUmumiy)}</b></div>
+        <div style="font-size:10.5px;color:var(--t4);margin-top:2px">Bu summa umumiy xarajatga qo'shilmaydi — alohida hisoblanadi</div>
         <div class="zk-avans-box" style="margin-top:8px"><span class="zk-avans-lbl">Olingan</span><span class="zk-avans-val">${fmt(xizOlingan)}</span></div>
         ${xizQoldiq>0?`<div class="zk-remain"><span class="zk-remain-lbl">Qoldiq</span><span class="zk-remain-val">${fmt(xizQoldiq)}</span></div>`:xizQoldiq<0?`<div class="zk-remain"><span class="zk-remain-lbl" style="color:var(--err)">Ortiqcha olingan</span><span class="zk-remain-val" style="color:var(--err)">${fmt(Math.abs(xizQoldiq))}</span></div>`:`<div class="zk-done">To'liq olingan</div>`}
         ${currentUser.rol==='prorab'?`<button class="btn-e" style="width:100%;margin-top:10px;padding:8px" onclick="openXizmatAvans('${ob.id}')">+ Avans oldim</button>`:''}
@@ -2384,6 +2575,186 @@ async function deleteZakaz(id){
     ()=>{DB.zakazlar.push(z);renderZakaz();});
 }
 
+// ─── USTALAR ───
+const USTA_MUTAXASSISLIK=(SUBKATS_META['Usta haqqi']||[]).map(x=>x.n);
+function fillUstaMutaxassislikSelect(selId,keepVal){
+  const el=document.getElementById(selId);if(!el)return;
+  const prev=keepVal||el.value;
+  el.innerHTML=USTA_MUTAXASSISLIK.map(s=>`<option>${esc(s)}</option>`).join('');
+  if(USTA_MUTAXASSISLIK.includes(prev))el.value=prev;
+}
+function openUstaModal(id){
+  const obs=getObs();
+  document.getElementById('usObyekt').innerHTML=obs.map(o=>`<option value="${o.id}">${esc(o.nom)}</option>`).join('');
+  fillUstaMutaxassislikSelect('usMutaxassislik');
+  document.getElementById('usError').style.display='none';
+  if(id){
+    const u=DB.ustalar.find(v=>v.id===id);if(!u)return;
+    document.getElementById('ustaModalTitle').textContent="Ustani Tahrirlash";
+    document.getElementById('usId').value=u.id;
+    document.getElementById('usObyekt').value=u.obyektId;
+    document.getElementById('usIsm').value=u.ism;
+    document.getElementById('usMutaxassislik').value=u.mutaxassislik||'';
+    document.getElementById('usKelishilgan').value=u.kelishilganSumma;
+    document.getElementById('usBoshlanish').value=u.boshlanishSana||'';
+    document.getElementById('usIzoh').value=u.izoh||'';
+  }else{
+    document.getElementById('ustaModalTitle').textContent="Yangi Usta";
+    document.getElementById('usId').value='';
+    document.getElementById('usIsm').value='';
+    document.getElementById('usKelishilgan').value='';
+    document.getElementById('usBoshlanish').value=today();
+    document.getElementById('usIzoh').value='';
+  }
+  document.getElementById('modalUsta').classList.add('on');
+}
+async function saveUsta(){
+  const id=document.getElementById('usId').value;
+  const obyektId=document.getElementById('usObyekt').value;
+  const ism=document.getElementById('usIsm').value.trim();
+  const mutaxassislik=document.getElementById('usMutaxassislik').value;
+  const kelishilganSumma=money(parseFloat(document.getElementById('usKelishilgan').value));
+  const boshlanishSana=document.getElementById('usBoshlanish').value;
+  const izoh=document.getElementById('usIzoh').value.trim();
+  if(!ism){showErr('usError',"Usta ismini kiriting");return;}
+  if(!validSumma(kelishilganSumma)){showErr('usError',"Kelishilgan summani to'g'ri kiriting");return;}
+  if(boshlanishSana&&!validSana(boshlanishSana)){showErr('usError',"Sana noto'g'ri");return;}
+  if(id){
+    const idx=DB.ustalar.findIndex(u=>u.id===id);if(idx===-1)return;
+    const holat=DB.ustalar[idx].holat;
+    const updated={id,obyektId,ism,mutaxassislik,kelishilganSumma,boshlanishSana,holat,izoh};
+    const{error}=await sb.from('ustalar').update(ustaToRow(updated)).eq('id',id);
+    if(error){showErr('usError','Saqlashda xato');return;}
+    DB.ustalar[idx]=updated;
+  }else{
+    const newU={id:genId('USTA'),obyektId,ism,mutaxassislik,kelishilganSumma,boshlanishSana,holat:'jarayonda',izoh};
+    const{error}=await sb.from('ustalar').insert(ustaToRow(newU));
+    if(error){showErr('usError','Saqlashda xato');return;}
+    DB.ustalar.push(newU);
+  }
+  document.getElementById('modalUsta').classList.remove('on');
+  notify('Saqlandi');
+  renderUstalar();
+}
+async function deleteUsta(id){
+  const u=DB.ustalar.find(v=>v.id===id);if(!u)return;
+  if(!await askConfirm(`"${u.ism}" bilan shartnomani o'chirmoqchimisiz? Unga tegishli barcha to'lovlar tarixi ham o'chadi.`,{danger:true,okText:"O'chirish"}))return;
+  const payments=DB.ustaTolovlari.filter(t=>t.ustaId===id);
+  DB.ustalar=DB.ustalar.filter(v=>v.id!==id);
+  DB.ustaTolovlari=DB.ustaTolovlari.filter(t=>t.ustaId!==id);
+  renderUstalar();
+  const{error}=await sb.from('ustalar').delete().eq('id',id); // usta_tolovlari FK cascade orqali avtomatik o'chadi
+  if(error){notify('Xato — qaytarildi');await refreshDB();renderUstalar();return;}
+  notify("O'chirildi");
+}
+function openUstaTolovModal(ustaId){
+  document.getElementById('utUstaId').value=ustaId;
+  document.getElementById('utSana').value=today();
+  document.getElementById('utSumma').value='';
+  document.getElementById('utTuri').value='avans';
+  document.getElementById('utIzoh').value='';
+  document.getElementById('utError').style.display='none';
+  document.getElementById('modalUstaTolov').classList.add('on');
+}
+async function saveUstaTolov(){
+  const ustaId=document.getElementById('utUstaId').value;
+  const usta=DB.ustalar.find(u=>u.id===ustaId);if(!usta)return;
+  const sana=document.getElementById('utSana').value;
+  const summa=money(parseFloat(document.getElementById('utSumma').value));
+  const turi=document.getElementById('utTuri').value;
+  const izoh=document.getElementById('utIzoh').value.trim();
+  if(!validSana(sana)){showErr('utError',"Sana noto'g'ri");return;}
+  if(!validSumma(summa)){showErr('utError',"Summani to'g'ri kiriting");return;}
+  const row={id:genId('UT'),ustaId,obyektId:usta.obyektId,sana,summa,turi,izoh};
+  const{error}=await sb.from('usta_tolovlari').insert(ustaTolToRow(row));
+  if(error){showErr('utError','Saqlashda xato');return;}
+  DB.ustaTolovlari.push(row);
+  // Holatni avtomatik yangilash: to'liq to'langan bo'lsa — tugallangan
+  const jamiTolangan=ustaJamiTolangan(ustaId);
+  const yangiHolat=jamiTolangan>=usta.kelishilganSumma&&usta.kelishilganSumma>0?'tugallangan':'jarayonda';
+  if(yangiHolat!==usta.holat){
+    await sb.from('ustalar').update({holat:yangiHolat}).eq('id',ustaId);
+    usta.holat=yangiHolat;
+  }
+  document.getElementById('modalUstaTolov').classList.remove('on');
+  notify("To'lov qo'shildi");
+  renderUstalar();
+}
+async function deleteUstaTolov(id){
+  const t=DB.ustaTolovlari.find(v=>v.id===id);if(!t)return;
+  const usta=DB.ustalar.find(u=>u.id===t.ustaId);
+  DB.ustaTolovlari=DB.ustaTolovlari.filter(v=>v.id!==id);
+  renderUstalar();
+  deleteWithUndo("To'lov",
+    async()=>{
+      const{error}=await sb.from('usta_tolovlari').delete().eq('id',id);
+      if(error){notify('Xato — qaytarildi');await refreshDB();renderUstalar();return;}
+      if(usta){
+        const jamiTolangan=ustaJamiTolangan(usta.id);
+        const yangiHolat=jamiTolangan>=usta.kelishilganSumma&&usta.kelishilganSumma>0?'tugallangan':'jarayonda';
+        if(yangiHolat!==usta.holat){await sb.from('ustalar').update({holat:yangiHolat}).eq('id',usta.id);usta.holat=yangiHolat;}
+      }
+    },
+    ()=>{DB.ustaTolovlari.push(t);renderUstalar();});
+}
+function renderUstalar(){
+  const list=getUstalar(),isP=currentUser.rol==='prorab';
+  const el=document.getElementById('ustaList');
+  if(!list.length){
+    el.innerHTML=isP
+      ?'<div class="empty"><div class="empty-ic"><i class="ico"><svg><use href="#ic-user"/></svg></i></div><div class="empty-t">Hali usta shartnomasi yo\'q</div><button class="btn-add" style="margin-top:14px" onclick="openUstaModal()">+ Birinchi ustani qo\'shish</button></div>'
+      :'<div class="empty"><div class="empty-ic"><i class="ico"><svg><use href="#ic-user"/></svg></i></div><div class="empty-t">Hali usta shartnomasi yo\'q</div></div>';
+    return;
+  }
+  el.innerHTML=list.slice().sort((a,b)=>(b.boshlanishSana||'').localeCompare(a.boshlanishSana||'')).map(u=>{
+    const ob=DB.obyektlar.find(o=>o.id===u.obyektId);
+    const tolovlar=ustaTolovlariFor(u.id).slice().sort((a,b)=>b.sana.localeCompare(a.sana));
+    const tolangan=tolovlar.reduce((s,t)=>s+t.summa,0);
+    const qoldiq=Math.max(0,u.kelishilganSumma-tolangan);
+    const pct=u.kelishilganSumma>0?Math.min(100,Math.round(tolangan/u.kelishilganSumma*100)):0;
+    const turiLabel={avans:'Avans',yakuniy:'Yakuniy',oddiy:'Oddiy'};
+    const tolovRows=!tolovlar.length?'<div class="ci-empty">Hali to\'lov yo\'q</div>':tolovlar.map(t=>`
+      <div class="ci-sub-zak">
+        <div class="ci-sub-zak-n">${t.sana} · <span style="color:var(--gold-d);font-weight:700">${turiLabel[t.turi]||t.turi}</span>${t.izoh?' — '+esc(t.izoh):''}</div>
+        <div class="ci-sub-zak-row">
+          <span style="color:var(--t1);font-weight:600">${fmt(t.summa)}</span>
+          ${isP?`<button class="btn-e" style="padding:3px 9px;font-size:11px" onclick="deleteUstaTolov('${t.id}')">O'chirish</button>`:''}
+        </div>
+      </div>`).join('');
+    return `
+    <div class="zk-card">
+      <div class="zk-top">
+        <div class="zk-icon"><i class="ico"><svg><use href="#ic-user"/></svg></i></div>
+        <div style="flex:1;min-width:0">
+          <div class="zk-title">${esc(u.ism)}</div>
+          <div class="zk-sub">${esc(u.mutaxassislik||'')}${isP&&ob?' · '+esc(ob.id):''}</div>
+        </div>
+        <span class="sb ${u.holat==='tugallangan'?'sb-g':'sb-y'}">${u.holat==='tugallangan'?'Tugallangan':'Jarayonda'}</span>
+      </div>
+      <div class="zk-body">
+        <div class="zk-avans-box"><span class="zk-avans-lbl"><i class="ico"><svg><use href="#ic-wallet"/></svg></i> Jami to'langan</span><span class="zk-avans-val">${fmt(tolangan)}</span></div>
+        ${qoldiq>0?`<div class="zk-remain"><span class="zk-remain-lbl"><i class="ico"><svg><use href="#ic-pin"/></svg></i> Qoldiq summa</span><span class="zk-remain-val">${fmt(qoldiq)}</span></div>`:`<div class="zk-done"><i class="ico"><svg><use href="#ic-check"/></svg></i> To'liq to'langan</div>`}
+        <div class="pg-wrap" style="margin-top:10px"><div class="pg-bar" style="width:${pct}%"></div></div>
+        <div class="zk-meta-row">
+          <div class="zk-meta-b"><div class="zk-meta-l">Kelishilgan summa</div><div class="zk-meta-v">${fmt(u.kelishilganSumma)}</div></div>
+          <div class="zk-meta-b"><div class="zk-meta-l">Boshlanish sanasi</div><div class="zk-meta-v">${u.boshlanishSana||'—'}</div></div>
+        </div>
+        ${u.izoh?`<div style="margin-top:10px;font-size:12px;color:var(--t3);padding:8px 10px;background:var(--b2);border-radius:8px">${esc(u.izoh)}</div>`:''}
+        <div class="ci ci-click" onclick="toggleKassaDetail('usta-tol-${u.id}')" style="margin-top:10px">
+          <div class="cn">To'lovlar tarixi (${tolovlar.length})</div>
+          <div class="ca"><span class="ci-arrow" id="ka-usta-tol-${u.id}">▾</span></div>
+        </div>
+        <div class="ci-detail" id="kd-usta-tol-${u.id}" style="display:none">${tolovRows}</div>
+        ${isP?`<div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn-save" style="flex:1;padding:8px;font-size:13px" onclick="openUstaTolovModal('${u.id}')">+ To'lov qo'shish</button>
+          <button class="btn-e" style="padding:8px" onclick="openUstaModal('${u.id}')"><i class="ico"><svg><use href="#ic-edit"/></svg></i></button>
+          <button class="btn-d" style="padding:8px 14px" aria-label="Ustani o'chirish" onclick="deleteUsta('${u.id}')"><i class="ico"><svg><use href="#ic-trash"/></svg></i></button>
+        </div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
 // ─── CHAT ───
 function chatKey(obId){return obId;}
 async function initChat(){
@@ -2438,9 +2809,11 @@ async function checkUnreadChat(){
 // ─── OBYEKTLAR ───
 async function renderObyektlar(){
   let html=getObs().map(ob=>{
-    const jX=DB.xarajatlar.filter(x=>x.obyektId===ob.id).reduce((s,x)=>s+x.jami,0)+DB.zakazlar.filter(z=>z.obyektId===ob.id).reduce((s,z)=>s+(Number(z.avans)||0),0);
+    const _ustaIds1=DB.ustalar.filter(u=>u.obyektId===ob.id).map(u=>u.id);
+    const jX=DB.xarajatlar.filter(x=>x.obyektId===ob.id).reduce((s,x)=>s+x.jami,0)+DB.zakazlar.filter(z=>z.obyektId===ob.id).reduce((s,z)=>s+(Number(z.avans)||0),0)+DB.ustaTolovlari.filter(t=>_ustaIds1.includes(t.ustaId)).reduce((s,t)=>s+t.summa,0);
     const jT=DB.tolovlar.filter(t=>t.obyektId===ob.id).reduce((s,t)=>s+t.summa,0);
-    const q=jT-jX;
+    const _xizOlingan1=DB.xizmatTolovlar.filter(z=>z.obyektId===ob.id).reduce((s,z)=>s+z.summa,0);
+    const q=jT-jX-_xizOlingan1;
     const qc=q<0?'sv-debt':q>0?'sv-credit':'sv-p';
     return `
     <div class="ob-card">
@@ -2637,7 +3010,9 @@ async function exportObyektPDF(id,opts={}){
     const xarajatlar=DB.xarajatlar.filter(x=>x.obyektId===id).sort((a,b)=>(a.sana||'').localeCompare(b.sana||''));
     const tolovlar=DB.tolovlar.filter(t=>t.obyektId===id).sort((a,b)=>(a.sana||'').localeCompare(b.sana||''));
     const zakazlar=DB.zakazlar.filter(z=>z.obyektId===id);
-    const jX=xarajatlar.reduce((s,x)=>s+x.jami,0)+zakazlar.reduce((s,z)=>s+(Number(z.avans)||0),0),jT=tolovlar.reduce((s,t)=>s+t.summa,0),q=jT-jX;
+    const ustalarRep=DB.ustalar.filter(u=>u.obyektId===id);
+    const ustaTolovlariRep=DB.ustaTolovlari.filter(t=>ustalarRep.some(u=>u.id===t.ustaId)).sort((a,b)=>(a.sana||'').localeCompare(b.sana||''));
+    const jX=xarajatlar.reduce((s,x)=>s+x.jami,0)+zakazlar.reduce((s,z)=>s+(Number(z.avans)||0),0)+ustaTolovlariRep.reduce((s,t)=>s+t.summa,0),jT=tolovlar.reduce((s,t)=>s+t.summa,0),_xizOlinganRep=DB.xizmatTolovlar.filter(z=>z.obyektId===id).reduce((s,z)=>s+z.summa,0),q=jT-jX-_xizOlinganRep;
 
     let pageNum=1;
     function drawFooter(){
@@ -2953,6 +3328,8 @@ function updateSubkat(){
   const obyektTuri=ob?ob.obyektTuri:'ikki';
   const list=subkatsForObyektTuri(k,obyektTuri);
   document.getElementById('fSubkat').innerHTML=list.map(s=>`<option>${esc(s)}</option>`).join('');
+  fillBirlikSelect('fBirlik',k);
+  toggleUstaBosqichUI(k,'fUstaBosqichWrap','fUstaBosqich','fIzoh');
 }
 function calcJami(){const n=parseFloat(document.getElementById('fNarx').value)||0,m=parseFloat(document.getElementById('fMiqdor').value)||0;document.getElementById('fJami').value=n&&m?fmt(n*m):'';}
 function previewImg(i,tid){const p=document.getElementById(tid);if(i.files&&i.files[0]){const r=new FileReader();r.onload=e=>{p.src=e.target.result;p.style.display='block';};r.readAsDataURL(i.files[0]);}}
@@ -3122,6 +3499,8 @@ function openEditXarajat(id){
   updateEditSubkat();document.getElementById('eXarSubkat').value=x.subkat;document.getElementById('eXarMahsulot').value=x.mahsulot;
   document.getElementById('eXarBirlik').value=x.birlik;document.getElementById('eXarNarx').value=x.narx;document.getElementById('eXarMiqdor').value=x.miqdor;
   document.getElementById('eXarJami').value=fmt(x.jami);document.getElementById('eXarIzoh').value=x.izoh||'';
+  const _bosqichSel=document.getElementById('eXarUstaBosqich');
+  if(_bosqichSel){const m=(x.izoh||'').match(/^\[([^\]]*)\]/);if(m&&TOLOV_BOSQICH.includes(m[1]))_bosqichSel.value=m[1];else _bosqichSel.value='';}
   document.getElementById('eXarRasmUrl').value=x.rasmUrl||'';
   document.getElementById('eXarRasmlarQoshimcha').value=x.rasmlarQoshimcha||'[]';
   document.getElementById('eImgUploadStatus').textContent='';
@@ -3135,6 +3514,8 @@ function updateEditSubkat(){
   const obyektTuri=ob?ob.obyektTuri:'ikki';
   const list=subkatsForObyektTuri(k,obyektTuri);
   document.getElementById('eXarSubkat').innerHTML=list.map(s=>`<option>${esc(s)}</option>`).join('');
+  fillBirlikSelect('eXarBirlik',k);
+  toggleUstaBosqichUI(k,'eXarUstaBosqichWrap','eXarUstaBosqich','eXarIzoh');
 }
 function calcEditJami(){const n=parseFloat(document.getElementById('eXarNarx').value)||0,m=parseFloat(document.getElementById('eXarMiqdor').value)||0;document.getElementById('eXarJami').value=n&&m?fmt(n*m):'';}
 async function saveEditXarajat(){
