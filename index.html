@@ -189,8 +189,11 @@ button:focus-visible,.inp:focus-visible{outline:2px solid var(--gold);outline-of
 .sg-4{grid-template-columns:repeat(4,1fr)}
 .sv-sub{font-size:10px;color:var(--t4);margin-top:3px;line-height:1.3}
 .seg-tabs{display:flex;gap:6px;margin-bottom:14px;background:var(--b2);padding:4px;border-radius:11px}
-.seg-btn{flex:1;padding:9px 10px;border:none;background:transparent;border-radius:8px;font-size:13px;font-weight:600;color:var(--t3);cursor:pointer;transition:all .15s;min-height:36px}
+.seg-btn{flex:1;padding:9px 10px;border:none;background:transparent;border-radius:8px;font-size:13px;font-weight:600;color:var(--t3);cursor:pointer;transition:all .15s;min-height:36px;position:relative}
+.seg-btn:hover{color:var(--gold-d);background:rgba(0,0,0,.03)}
+.seg-btn:active{transform:scale(.97)}
 .seg-btn.on{background:var(--bg);color:var(--t1);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.seg-btn.on:hover{color:var(--t1)}
 .sc{background:var(--bg);border:1px solid var(--b);border-radius:var(--r2);padding:14px 10px;text-align:center}
 .sc-r{background:var(--err2);border-color:var(--err2)}
 .sc-g{background:var(--ok2);border-color:var(--ok2)}
@@ -2461,11 +2464,17 @@ function renderKassa(){
     }).join('');
     const ustaDetail=!usta.length?'<div class="ci-empty">Usta shartnomasi yo\'q</div>':usta.map(u=>{
       const tolangan=ustaJamiTolangan(u.id),belgilanmagan=!u.kelishilganSumma||u.kelishilganSumma<=0,uq=belgilanmagan?0:Math.max(0,u.kelishilganSumma-tolangan);
-      return `<div class="ci-sub-zak"><div class="ci-sub-zak-n">${esc(u.ism)}${u.mutaxassislik?' — '+esc(u.mutaxassislik):''}${!belgilanmagan?` <span style="color:var(--t4)">· Kelishilgan: ${fmt(u.kelishilganSumma)}</span>`:''}</div><div class="ci-sub-zak-row"><span style="color:var(--t1);font-weight:600">To'langan: ${fmt(tolangan)}</span>${belgilanmagan?`<span style="color:var(--t3)">Hisob-kitob kutilmoqda</span>`:uq>0?`<span style="color:var(--t2);font-weight:600">Qoldiq: ${fmt(uq)}</span>`:`<span style="color:var(--gold-d)">To'liq to'langan</span>`}</div></div>`;
+      const rightInfo=belgilanmagan
+        ?`<span style="color:var(--t3)">Hisob-kitob kutilmoqda</span>`
+        :`<span style="color:var(--t3)">Kelishilgan: ${fmt(u.kelishilganSumma)}${uq>0?` · Qoldiq: ${fmt(uq)}`:" · To'liq to'langan"}</span>`;
+      return `<div class="ci-sub-zak"><div class="ci-sub-zak-n">${esc(u.ism)}${u.mutaxassislik?' — '+esc(u.mutaxassislik):''}</div><div class="ci-sub-zak-row"><span style="color:var(--t1);font-weight:600">To'langan: ${fmt(tolangan)}</span>${rightInfo}</div></div>`;
     }).join('');
     const kontDetail=!kont.length?'<div class="ci-empty">Kontragent yo\'q</div>':kont.map(k=>{
       const tolangan=kontragentJamiTolangan(k.id),belgilanmagan=!k.kelishilganSumma||k.kelishilganSumma<=0,kq=belgilanmagan?0:Math.max(0,k.kelishilganSumma-tolangan);
-      return `<div class="ci-sub-zak"><div class="ci-sub-zak-n">${esc(k.nomi)}${k.turi?' — '+esc(k.turi):''}${!belgilanmagan?` <span style="color:var(--t4)">· Kelishilgan: ${fmt(k.kelishilganSumma)}</span>`:''}</div><div class="ci-sub-zak-row"><span style="color:var(--t1);font-weight:600">To'langan: ${fmt(tolangan)}</span>${belgilanmagan?`<span style="color:var(--t3)">Hisob-kitob kutilmoqda</span>`:kq>0?`<span style="color:var(--t2);font-weight:600">Qoldiq: ${fmt(kq)}</span>`:`<span style="color:var(--gold-d)">To'liq to'langan</span>`}</div></div>`;
+      const rightInfo=belgilanmagan
+        ?`<span style="color:var(--t3)">Hisob-kitob kutilmoqda</span>`
+        :`<span style="color:var(--t3)">Kelishilgan: ${fmt(k.kelishilganSumma)}${kq>0?` · Qoldiq: ${fmt(kq)}`:" · To'liq to'langan"}</span>`;
+      return `<div class="ci-sub-zak"><div class="ci-sub-zak-n">${esc(k.nomi)}${k.turi?' — '+esc(k.turi):''}</div><div class="ci-sub-zak-row"><span style="color:var(--t1);font-weight:600">To'langan: ${fmt(tolangan)}</span>${rightInfo}</div></div>`;
     }).join('');
 
     const catRow=(key,label,color,total,detailHtml)=>`
