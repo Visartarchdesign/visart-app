@@ -628,7 +628,7 @@ textarea.inp{resize:vertical;min-height:80px}
           <button class="eye-btn" onclick="togglePass('regParol','regEye')" id="regEye"><i class="ico"><svg><use href="#ic-eye"/></svg></i></button>
         </div>
       </div>
-      <button class="btn-main" onclick="doRegister()" style="margin-top:16px">Ro'yxatdan o'tish</button>
+      <button class="btn-main" id="regBtn" onclick="doRegister()" style="margin-top:16px">Ro'yxatdan o'tish</button>
       <div class="lerr" id="regError"></div>
       <div class="lok" id="regOk"></div>
     </div>
@@ -2024,6 +2024,14 @@ const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth
 function validSana(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s||''))return false;const d=new Date(s+'T00:00:00');if(isNaN(d))return false;const max=new Date();max.setFullYear(max.getFullYear()+1);return d>=new Date('2020-01-01')&&d<=max;}
 // 4.3: musbat summa tekshiruvi
 function validSumma(n){n=Number(n);return isFinite(n)&&n>0&&n<1e15;}
+// Tarmoq/server javob bermay "osilib qolish" holatining oldini oladi —
+// belgilangan vaqtda javob kelmasa, aniq xato bilan to'xtaydi.
+function withTimeout(promise,ms,message){
+  return Promise.race([
+    promise,
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error(message||"Ulanish vaqti tugadi — internetni tekshiring")),ms))
+  ]);
+}
 // 7.5: global xato tutuvchi — konsolga + Supabase xato_log jadvaliga yozadi
 let _lastErrTs=0;
 async function reportError(msg,stack){
@@ -2098,36 +2106,41 @@ async function doLogin(){
   if(!login||!pass){showErr('loginError','Login va parolni kiriting');return;}
   const btn=document.getElementById('loginBtn');if(btn){btn.disabled=true;btn.textContent='Kirilmoqda...';}
   try{
-    const check=await callManageAuth('check_login_allowed',{login});
+    const check=await withTimeout(callManageAuth('check_login_allowed',{login}),15000,"Server javob bermayapti — internet aloqangizni tekshiring");
     if(!check.ok){showErr('loginError',check.error||"Juda ko'p urinish");return;}
-    const{data,error}=await sb.auth.signInWithPassword({email:toAuthEmail(login),password:pass});
+    const{data,error}=await withTimeout(sb.auth.signInWithPassword({email:toAuthEmail(login),password:pass}),15000,"Ulanish vaqti tugadi — internetingizni tekshirib qayta urining");
     callManageAuth('record_login_result',{login,success:!error});
     if(error||!data.user){showErr('loginError',"Login yoki parol noto'g'ri");return;}
-    const ok=await loadCurrentProfile();
+    const ok=await withTimeout(loadCurrentProfile(),15000,"Profilni yuklashda vaqt tugadi — qayta urining");
     if(!ok){showErr('loginError','Profil topilmadi — administratorga murojaat qiling');await sb.auth.signOut();return;}
     if(currentUser.rol!=='superadmin'&&currentUser.kompaniyaId){
-      const{data:komp}=await sb.from('kompaniyalar').select('faol').eq('id',currentUser.kompaniyaId).maybeSingle();
+      const{data:komp}=await withTimeout(sb.from('kompaniyalar').select('faol').eq('id',currentUser.kompaniyaId).maybeSingle(),15000,"Server javob bermayapti");
       if(komp&&komp.faol===false){
         showErr('loginError','Kompaniyangiz vaqtincha bloklangan. Administrator bilan bog\'laning.');
         await sb.auth.signOut();currentUser=null;return;
       }
     }
     await startApp();
-  }catch(e){console.error(e);showErr('loginError','Ulanishda xato — Supabase sozlamalarini tekshiring');}
+  }catch(e){console.error(e);showErr('loginError',e&&e.message?e.message:'Ulanishda xato — internetni yoki Supabase sozlamalarini tekshiring');}
   finally{if(btn){btn.disabled=false;btn.textContent='Kirish';}}
 }
 async function tryAutoLogin(){
   try{
-    const{data:{session}}=await sb.auth.getSession();
+    const{data:{session}}=await withTimeout(sb.auth.getSession(),12000,"Sessiya tekshirishda vaqt tugadi");
     if(!session)return;
-    const ok=await loadCurrentProfile();
+    const ok=await withTimeout(loadCurrentProfile(),12000,"Profilni yuklashda vaqt tugadi");
     if(!ok)return;
     if(currentUser.rol!=='superadmin'&&currentUser.kompaniyaId){
-      const{data:komp}=await sb.from('kompaniyalar').select('faol').eq('id',currentUser.kompaniyaId).maybeSingle();
+      const{data:komp}=await withTimeout(sb.from('kompaniyalar').select('faol').eq('id',currentUser.kompaniyaId).maybeSingle(),12000,"Server javob bermayapti");
       if(komp&&komp.faol===false){await sb.auth.signOut();currentUser=null;showErr('loginError','Kompaniyangiz vaqtincha bloklangan. Administrator bilan bog\'laning.');return;}
     }
     await startApp();
-  }catch(e){console.error(e);}
+  }catch(e){
+    console.error(e);
+    // Avtomatik kirish muvaffaqiyatsiz bo'lsa — jim login ekraniga qaytaramiz,
+    // lekin sabab konsolda qoladi va foydalanuvchi login formasidan qo'lda urinishi mumkin.
+    showErr('loginError',(e&&e.message)||'Ulanishda xato — internetni tekshirib qayta urining');
+  }
 }
 async function doRegister(){
   const kod=document.getElementById('regKompaniyaKod').value.trim().toUpperCase();
@@ -2140,11 +2153,15 @@ async function doRegister(){
   if(!tel){showErr('regError','Parolni tiklash uchun telefon raqami majburiy');return;}
   if(!login){showErr('regError','Login kiriting');return;}
   if(!parol||parol.length<8){showErr('regError','Parol kamida 8 belgi');return;}
-  const res=await callManageAuth('register_prorab',{kod,ism,tel,login,parol});
-  if(!res.ok){showErr('regError',res.error||"Ro'yxatdan o'tishda xato");return;}
-  const ok=document.getElementById('regOk');
-  ok.textContent='Ro\'yxatdan o\'tdingiz! Endi kiring.';ok.style.display='block';
-  setTimeout(()=>{ok.style.display='none';switchAuthTab('login');document.getElementById('loginEmail').value=login;['regKompaniyaKod','regIsm','regTel','regLogin','regParol'].forEach(id=>document.getElementById(id).value='');},1800);
+  const btn=document.getElementById('regBtn');if(btn){btn.disabled=true;btn.textContent="Yuborilmoqda...";}
+  try{
+    const res=await withTimeout(callManageAuth('register_prorab',{kod,ism,tel,login,parol}),15000,"Server javob bermayapti — internetni tekshirib qayta urining");
+    if(!res.ok){showErr('regError',res.error||"Ro'yxatdan o'tishda xato");return;}
+    const ok=document.getElementById('regOk');
+    ok.textContent='Ro\'yxatdan o\'tdingiz! Endi kiring.';ok.style.display='block';
+    setTimeout(()=>{ok.style.display='none';switchAuthTab('login');document.getElementById('loginEmail').value=login;['regKompaniyaKod','regIsm','regTel','regLogin','regParol'].forEach(id=>document.getElementById(id).value='');},1800);
+  }catch(e){console.error(e);showErr('regError',(e&&e.message)||'Ulanishda xato — internetni tekshirib qayta urining');}
+  finally{if(btn){btn.disabled=false;btn.textContent="Ro'yxatdan o'tish";}}
 }
 function showErr(elId,m){const el=document.getElementById(elId);el.textContent=m;el.style.display='block';setTimeout(()=>el.style.display='none',3500);}
 async function startApp(){
@@ -2444,11 +2461,11 @@ function renderKassa(){
     }).join('');
     const ustaDetail=!usta.length?'<div class="ci-empty">Usta shartnomasi yo\'q</div>':usta.map(u=>{
       const tolangan=ustaJamiTolangan(u.id),belgilanmagan=!u.kelishilganSumma||u.kelishilganSumma<=0,uq=belgilanmagan?0:Math.max(0,u.kelishilganSumma-tolangan);
-      return `<div class="ci-sub-zak"><div class="ci-sub-zak-n">${esc(u.ism)}${u.mutaxassislik?' — '+esc(u.mutaxassislik):''}</div><div class="ci-sub-zak-row"><span style="color:var(--t1);font-weight:600">To'langan: ${fmt(tolangan)}</span>${belgilanmagan?`<span style="color:var(--t3)">Hisob-kitob kutilmoqda</span>`:uq>0?`<span style="color:var(--t2);font-weight:600">Qoldiq: ${fmt(uq)}</span>`:`<span style="color:var(--gold-d)">To'liq to'langan</span>`}</div></div>`;
+      return `<div class="ci-sub-zak"><div class="ci-sub-zak-n">${esc(u.ism)}${u.mutaxassislik?' — '+esc(u.mutaxassislik):''}${!belgilanmagan?` <span style="color:var(--t4)">· Kelishilgan: ${fmt(u.kelishilganSumma)}</span>`:''}</div><div class="ci-sub-zak-row"><span style="color:var(--t1);font-weight:600">To'langan: ${fmt(tolangan)}</span>${belgilanmagan?`<span style="color:var(--t3)">Hisob-kitob kutilmoqda</span>`:uq>0?`<span style="color:var(--t2);font-weight:600">Qoldiq: ${fmt(uq)}</span>`:`<span style="color:var(--gold-d)">To'liq to'langan</span>`}</div></div>`;
     }).join('');
     const kontDetail=!kont.length?'<div class="ci-empty">Kontragent yo\'q</div>':kont.map(k=>{
       const tolangan=kontragentJamiTolangan(k.id),belgilanmagan=!k.kelishilganSumma||k.kelishilganSumma<=0,kq=belgilanmagan?0:Math.max(0,k.kelishilganSumma-tolangan);
-      return `<div class="ci-sub-zak"><div class="ci-sub-zak-n">${esc(k.nomi)}${k.turi?' — '+esc(k.turi):''}</div><div class="ci-sub-zak-row"><span style="color:var(--t1);font-weight:600">To'langan: ${fmt(tolangan)}</span>${belgilanmagan?`<span style="color:var(--t3)">Hisob-kitob kutilmoqda</span>`:kq>0?`<span style="color:var(--t2);font-weight:600">Qoldiq: ${fmt(kq)}</span>`:`<span style="color:var(--gold-d)">To'liq to'langan</span>`}</div></div>`;
+      return `<div class="ci-sub-zak"><div class="ci-sub-zak-n">${esc(k.nomi)}${k.turi?' — '+esc(k.turi):''}${!belgilanmagan?` <span style="color:var(--t4)">· Kelishilgan: ${fmt(k.kelishilganSumma)}</span>`:''}</div><div class="ci-sub-zak-row"><span style="color:var(--t1);font-weight:600">To'langan: ${fmt(tolangan)}</span>${belgilanmagan?`<span style="color:var(--t3)">Hisob-kitob kutilmoqda</span>`:kq>0?`<span style="color:var(--t2);font-weight:600">Qoldiq: ${fmt(kq)}</span>`:`<span style="color:var(--gold-d)">To'liq to'langan</span>`}</div></div>`;
     }).join('');
 
     const catRow=(key,label,color,total,detailHtml)=>`
