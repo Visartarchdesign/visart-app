@@ -2,7 +2,7 @@
 // Maqsad: PWA sifatida "o'rnatish" imkonini berish + oddiy offline-qobiliyat.
 // Ma'lumotlar (Supabase) doim tarmoqdan olinadi — bu yerda faqat ilova "qobig'i" keshlanadi.
 
-const CACHE_NAME = 'visart-shell-v3';
+const CACHE_NAME = 'visart-shell-v4';
 const SHELL_FILES = [
   './',
   './manifest.json',
@@ -34,6 +34,22 @@ self.addEventListener('notificationclick', (event) => {
         if ('focus' in client) return client.focus();
       }
       if (self.clients.openWindow) return self.clients.openWindow('./');
+    })
+  );
+});
+
+// ─── HAQIQIY FON-BILDIRISHNOMA: server yuborgan push xabarini ko'rsatadi ───
+// (ilova yopiq bo'lsa ham ishlaydi — bu native brauzer/OS imkoniyati)
+self.addEventListener('push', (event) => {
+  let data = { title: 'VISART', body: 'Yangilanish bor' };
+  try { if (event.data) data = event.data.json(); } catch (e) {}
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'VISART', {
+      body: data.body || '',
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
+      tag: 'visart-push-' + Date.now(),
+      vibrate: [100, 50, 100],
     })
   );
 });
