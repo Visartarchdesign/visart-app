@@ -2323,9 +2323,10 @@ async function signOutAllDevices(){
   currentUser=null;unsubscribeRealtime();
   document.getElementById('mainApp').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
+  revealLoginForm();
   notify('Barcha qurilmalardan chiqildi');
 }
-async function doLogout(){unsubscribeRealtime();await sb.auth.signOut();currentUser=null;document.getElementById('mainApp').style.display='none';document.getElementById('loginScreen').style.display='flex';document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';switchAuthTab('login');}
+async function doLogout(){unsubscribeRealtime();await sb.auth.signOut();currentUser=null;document.getElementById('mainApp').style.display='none';document.getElementById('loginScreen').style.display='flex';revealLoginForm();document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';switchAuthTab('login');}
 
 // ─── INIT ───
 function initApp(){
