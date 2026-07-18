@@ -3595,29 +3595,6 @@ async function exportObyektPDF(id,opts={}){
     drawStatBox(marginX+(boxW+3)*2,q<0?'Qarzdorlik':q>0?'Qoldiq summa':'Qoldiq',Math.abs(q),q<0?[190,50,50]:[20,140,90]);
     y+=boxH+7;
 
-    if(ob.smeta>0){
-      ensureSpace(10);
-      const over=jX>ob.smeta;
-      const sp=Math.min(100,Math.round(jX/ob.smeta*100));
-      doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(60);
-      doc.text(T(`Taxminiy smeta: ${fmt(ob.smeta)}`),marginX,y);
-      doc.setTextColor(over?190:20,over?50:140,over?50:90);
-      doc.text(T(`${sp}%  ·  ${over?"Oshib ketdi: "+fmt(jX-ob.smeta):"Qoldi: "+fmt(ob.smeta-jX)}`),pageW-marginX,y,{align:'right'});
-      doc.setTextColor(0);
-      // progress bar
-      y+=2.5;
-      doc.setFillColor(240,238,232);doc.roundedRect(marginX,y,pageW-marginX*2,2,1,1,'F');
-      doc.setFillColor(over?200:190,over?60:150,over?60:90);
-      doc.roundedRect(marginX,y,(pageW-marginX*2)*Math.min(100,sp)/100,2,1,1,'F');
-      y+=8;
-      if(ob.tugashSana){
-        doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(120);
-        doc.text(T(`Tugallanishi kutilayotgan taxminiy sana: ${ob.tugashSana}`),marginX,y);
-        doc.setTextColor(0);y+=6;
-      }
-    }
-    y+=2;
-
     // ── Generic jadval chizuvchi funksiya ──
     function drawTable(title,headers,colWidths,rows,opts={}){
       ensureSpace(14);
@@ -3664,6 +3641,16 @@ async function exportObyektPDF(id,opts={}){
       y+=6;
     }
 
+    // ── TO'LOVLAR jadvali ──
+    const tolRows=tolovlar.map(t=>[t.sana||'-',T(t.turi),T(t.izoh||'-'),fmt(t.summa)]);
+    drawTable(
+      "TO'LOVLAR",
+      ['Sana','Turi','Izoh','Summa'],
+      [22,32,pageW-marginX*2-22-32-32,32],
+      tolRows,
+      {rightAlign:[3],emptyText:"To'lovlar mavjud emas"}
+    );
+
     // ── XARAJATLAR jadvali ──
     const xarRows=xarajatlar.map(x=>[
       x.sana||'-',
@@ -3681,67 +3668,11 @@ async function exportObyektPDF(id,opts={}){
       {rightAlign:[4,5],emptyText:"Xarajatlar mavjud emas"}
     );
 
-    // Xarajat izohlari va chek rasmlari (agar bo'lsa) — alohida ixcham bo'lim
-    const xarWithExtra=xarajatlar.filter(x=>x.izoh||x.rasmUrl);
-    if(xarWithExtra.length){
-      ensureSpace(8);
-      doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(100);
-      doc.text(T('Qo\'shimcha: izohlar va chek rasmlari'),marginX,y);doc.setTextColor(0);y+=5;
-      for(const x of xarWithExtra){
-        ensureSpace(6);
-        doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(60);
-        doc.text(T(`${x.sana} · ${x.mahsulot}`),marginX,y);doc.setTextColor(0);y+=4;
-        if(x.izoh){
-          doc.setFont('helvetica','normal');doc.setFontSize(7.3);doc.setTextColor(110);
-          doc.text(T(x.izoh),marginX+2,y,{maxWidth:pageW-marginX*2-4});y+=4.5;
-          doc.setTextColor(0);
-        }
-        const rasmUrls=[];
-        if(x.rasmUrl)rasmUrls.push(x.rasmUrl);
-        try{const extra=JSON.parse(x.rasmlarQoshimcha||'[]');rasmUrls.push(...extra);}catch(e){}
-        if(rasmUrls.length){
-          const maxW=38,maxH=38,gap=3;
-          let rowX=marginX+2,rowMaxH=0;
-          ensureSpace(maxH+3);
-          for(const url of rasmUrls){
-            const img=await imgUrlToDataURL(url);
-            if(img){
-              let w=maxW,h=img.height*(maxW/img.width);
-              if(h>maxH){h=maxH;w=img.width*(maxH/img.height);}
-              if(rowX+w>pageW-marginX){rowX=marginX+2;y+=rowMaxH+gap;ensureSpace(maxH+3);rowMaxH=0;}
-              try{doc.addImage(img.dataUrl,'JPEG',rowX,y,w,h);imagePaths.push(extractStoragePath(url));}catch(e){console.error(e);}
-              rowX+=w+gap;
-              rowMaxH=Math.max(rowMaxH,h);
-            }
-          }
-          y+=rowMaxH+3;
-        }
-      }
-      y+=3;
-    }
-
-    // ── TO'LOVLAR jadvali ──
-    const tolRows=tolovlar.map(t=>[t.sana||'-',T(t.turi),T(t.izoh||'-'),fmt(t.summa)]);
-    drawTable(
-      "TO'LOVLAR",
-      ['Sana','Turi','Izoh','Summa'],
-      [22,32,pageW-marginX*2-22-32-32,32],
-      tolRows,
-      {rightAlign:[3],emptyText:"To'lovlar mavjud emas"}
-    );
-
-    // ── BUYURTMALAR jadvali (agar bo'lsa) ──
-    if(zakazlar.length){
-      const zakRows=zakazlar.map(z=>[
-        T(z.nomi),T(z.turi),fmt(z.umumiy),fmt(z.avans),fmt(z.umumiy-z.avans),T(z.holat)
-      ]);
-      drawTable(
-        'BUYURTMALAR',
-        ['Nomi','Turi','Umumiy','Avans','Qoldiq','Holat'],
-        [50,26,30,30,30,pageW-marginX*2-50-26-30-30-30],
-        zakRows,
-        {rightAlign:[2,3,4],emptyText:"Buyurtmalar mavjud emas"}
-      );
+    // Chek rasmlarining Storage yo'llarini jimgina yig'ib olamiz (ko'rinishda chiqarmaymiz —
+    // faqat obyekt o'chirilganda serverdan tozalash uchun kerak bo'ladi)
+    for(const x of xarajatlar){
+      if(x.rasmUrl)imagePaths.push(extractStoragePath(x.rasmUrl));
+      try{const extra=JSON.parse(x.rasmlarQoshimcha||'[]');extra.forEach(u=>imagePaths.push(extractStoragePath(u)));}catch(e){}
     }
 
     // ── USTALAR jadvali (agar bo'lsa) ──
@@ -3766,6 +3697,20 @@ async function exportObyektPDF(id,opts={}){
       );
     }
 
+    // ── BUYURTMALAR jadvali (agar bo'lsa) ──
+    if(zakazlar.length){
+      const zakRows=zakazlar.map(z=>[
+        T(z.nomi),T(z.turi),fmt(z.umumiy),fmt(z.avans),fmt(z.umumiy-z.avans),T(z.holat)
+      ]);
+      drawTable(
+        'BUYURTMALAR',
+        ['Nomi','Turi','Umumiy','Avans','Qoldiq','Holat'],
+        [50,26,30,30,30,pageW-marginX*2-50-26-30-30-30],
+        zakRows,
+        {rightAlign:[2,3,4],emptyText:"Buyurtmalar mavjud emas"}
+      );
+    }
+
     // ── BOSHQA XARAJATLAR jadvali — Transport, Asbob-uskuna, Arxitektura, Loyiha (agar bo'lsa) ──
     if(kontragentlarRep.length){
       const kontRows=kontragentlarRep.map(k=>{
@@ -3787,6 +3732,40 @@ async function exportObyektPDF(id,opts={}){
         {rightAlign:[2,3,4],emptyText:"Ma'lumot mavjud emas"}
       );
     }
+
+    // ── MUALLIFLIK NAZORATI XIZMAT HAQQI (prorab ish haqi) ──
+    if(ob.xizmatTuri&&ob.xizmatTuri!=='yoq'){
+      const xizOlinganRep2=DB.xizmatTolovlar.filter(z=>z.obyektId===id).reduce((s,z)=>s+z.summa,0);
+      const xizUmumiyRep=xizmatHaqqiUmumiy(ob,jX);
+      ensureSpace(24);
+      doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(20);
+      doc.text(T('MUALLIFLIK NAZORATI XIZMAT HAQQI'),marginX,y);
+      doc.setTextColor(0);y+=6;
+      const mBoxW=(pageW-marginX*2-6)/3;
+      const drawMiniBox=(x,label,value,color)=>{
+        doc.setFillColor(250,249,247);doc.setDrawColor(228,222,208);doc.setLineWidth(0.3);
+        doc.roundedRect(x,y,mBoxW,16,1.5,1.5,'FD');
+        doc.setFont('helvetica','normal');doc.setFontSize(7.2);doc.setTextColor(130);
+        doc.text(T(label),x+4,y+6);
+        doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...color);
+        doc.text(T(fmt(value)),x+4,y+12.5);
+        doc.setTextColor(0);
+      };
+      drawMiniBox(marginX,'Umumiy',xizUmumiyRep,[20,20,20]);
+      drawMiniBox(marginX+mBoxW+3,'Olingan',xizOlinganRep2,[20,140,90]);
+      drawMiniBox(marginX+(mBoxW+3)*2,'Qoldiq',Math.max(0,xizUmumiyRep-xizOlinganRep2),[190,50,50]);
+      y+=16+8;
+    }
+
+    // ── YAKUNIY JAMI XARAJAT ──
+    ensureSpace(16);
+    doc.setDrawColor(20);doc.setLineWidth(0.4);
+    doc.line(marginX,y,pageW-marginX,y);y+=6;
+    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(20);
+    doc.text(T('JAMI SARFLANGAN XARAJAT:'),marginX,y);
+    doc.setTextColor(190,50,50);
+    doc.text(T(fmt(jX)),pageW-marginX,y,{align:'right'});
+    doc.setTextColor(0);y+=8;
 
     drawFooter();
 
