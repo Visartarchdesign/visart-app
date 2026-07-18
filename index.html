@@ -592,6 +592,10 @@ textarea.inp{resize:vertical;min-height:80px}
       <div class="brand-n">VISART</div>
       <div class="brand-s">Qurilish hisoboti</div>
       <div class="brand-contact">+998 97 402 15 15 · visartdesign.uz</div>
+      <button id="pwaInstallBtn" onclick="triggerPWAInstall()" style="display:none;margin-top:14px;width:100%;padding:11px;background:var(--gold);border:none;border-radius:10px;color:#fff;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:8px">
+        <i class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13m0-13l-4 4m4-4l4 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg></i>
+        Ilovani telefonga o'rnatish
+      </button>
     </div>
 
     <div class="ltabs">
@@ -1985,7 +1989,8 @@ const RU={
 "Yakuniy summa hali belgilanmagan — \"Yakuniy hisob-kitob\" tugmasi orqali belgilang.":"Итоговая сумма ещё не определена — укажите её через кнопку «Окончательный расчёт».",
 "Hali yozuv yo'q":"Записей ещё нет","+ Birinchisini qo'shish":"+ Добавить первую запись",
 "Boshqa xarajatlar bo'yicha qolgan to'lov":"Оставшийся платёж по прочим расходам","Boshqa xarajatlar (eski yozuvlar)":"Прочие расходы (старые записи)",
-"Kelishilgan summa (ixtiyoriy)":"Согласованная сумма (необязательно)","Bo'sh qoldirish mumkin":"Можно оставить пустым"
+"Kelishilgan summa (ixtiyoriy)":"Согласованная сумма (необязательно)","Bo'sh qoldirish mumkin":"Можно оставить пустым",
+"Ilovani telefonga o'rnatish":"Установить приложение на телефон"
 };
 function t(s){return LANG==='ru'&&RU[s]||s;}
 function translateStatic(){
@@ -3739,6 +3744,50 @@ async function exportObyektPDF(id,opts={}){
       );
     }
 
+    // ── USTALAR jadvali (agar bo'lsa) ──
+    if(ustalarRep.length){
+      const ustaRows=ustalarRep.map(u=>{
+        const tolangan=ustaTolovlariRep.filter(t=>t.ustaId===u.id).reduce((s,t)=>s+t.summa,0);
+        const belgilanmagan=!u.kelishilganSumma||u.kelishilganSumma<=0;
+        return[
+          T(u.ism),T(u.mutaxassislik||'-'),
+          belgilanmagan?'Hisob-kitob kutilmoqda':fmt(u.kelishilganSumma),
+          fmt(tolangan),
+          belgilanmagan?'-':fmt(Math.max(0,u.kelishilganSumma-tolangan)),
+          T(u.holat==='tugallangan'?'Tugallangan':'Jarayonda')
+        ];
+      });
+      drawTable(
+        'USTALAR',
+        ['Ismi','Mutaxassislik','Kelishilgan','Olingan avans','Qoldiq','Holat'],
+        [40,32,30,30,30,pageW-marginX*2-40-32-30-30-30],
+        ustaRows,
+        {rightAlign:[2,3,4],emptyText:"Usta shartnomalari mavjud emas"}
+      );
+    }
+
+    // ── BOSHQA XARAJATLAR jadvali — Transport, Asbob-uskuna, Arxitektura, Loyiha (agar bo'lsa) ──
+    if(kontragentlarRep.length){
+      const kontRows=kontragentlarRep.map(k=>{
+        const tolangan=kontTolovlariRep.filter(t=>t.kontragentId===k.id).reduce((s,t)=>s+t.summa,0);
+        const belgilanmagan=!k.kelishilganSumma||k.kelishilganSumma<=0;
+        return[
+          T(k.nomi),T(k.turi||'-'),
+          belgilanmagan?'Hisob-kitob kutilmoqda':fmt(k.kelishilganSumma),
+          fmt(tolangan),
+          belgilanmagan?'-':fmt(Math.max(0,k.kelishilganSumma-tolangan)),
+          T(k.holat==='tugallangan'?'Tugallangan':'Jarayonda')
+        ];
+      });
+      drawTable(
+        'BOSHQA XARAJATLAR',
+        ['Nomi','Turi','Kelishilgan','Olingan avans','Qoldiq','Holat'],
+        [40,32,30,30,30,pageW-marginX*2-40-32-30-30-30],
+        kontRows,
+        {rightAlign:[2,3,4],emptyText:"Ma'lumot mavjud emas"}
+      );
+    }
+
     drawFooter();
 
     doc.save(`${ob.nom.replace(/[^a-zA-Z0-9 ]/g,'')}_hisobot_${today()}.pdf`);
@@ -4166,6 +4215,29 @@ document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',e=>{if(e.
 document.getElementById('loginPassword').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 tryAutoLogin();
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(e=>console.log('SW ro\'yxatdan o\'tmadi:',e));});}
+
+// ─── PWA bitta tugma bilan o'rnatish (faqat Android/Chrome qo'llab-quvvatlaydi) ───
+let _deferredInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault();
+  _deferredInstallPrompt=e;
+  const btn=document.getElementById('pwaInstallBtn');
+  if(btn)btn.style.display='flex';
+});
+async function triggerPWAInstall(){
+  if(!_deferredInstallPrompt)return;
+  _deferredInstallPrompt.prompt();
+  const{outcome}=await _deferredInstallPrompt.userChoice;
+  if(outcome==='accepted'){
+    const btn=document.getElementById('pwaInstallBtn');
+    if(btn)btn.style.display='none';
+  }
+  _deferredInstallPrompt=null;
+}
+window.addEventListener('appinstalled',()=>{
+  const btn=document.getElementById('pwaInstallBtn');
+  if(btn)btn.style.display='none';
+});
 </script>
 </body>
 </html>
