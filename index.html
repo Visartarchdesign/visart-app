@@ -51,10 +51,12 @@
   --sh2:0 6px 20px rgba(0,0,0,.4);
   --sh3:0 16px 40px rgba(0,0,0,.5);
 }
+html{overscroll-behavior-y:contain}
 body{font-family:'Inter',system-ui,sans-serif;color:var(--t1);min-height:100vh;font-size:14px;line-height:1.5;
   background-color:var(--bg);
   background-attachment:fixed;
   transition:background-color .25s ease,color .25s ease;
+  overscroll-behavior-y:contain;
 }
 .serif{font-family:'Playfair Display',serif}
 
@@ -585,7 +587,14 @@ textarea.inp{resize:vertical;min-height:80px}
       <line x1="200" y1="20" x2="20" y2="200" stroke-width=".7"/>
     </svg>
   </div>
-  <div class="lc">
+  <div id="authSplash" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--ink-solid, #1A1A1A);z-index:50">
+    <div style="text-align:center">
+      <div style="width:48px;height:48px;margin:0 auto 16px;border:3px solid rgba(201,169,110,.25);border-top-color:#C9A96E;border-radius:50%;animation:authspin .8s linear infinite"></div>
+      <div style="color:#C9A96E;font-family:'Playfair Display',serif;font-size:14px;letter-spacing:1px">VISART</div>
+    </div>
+  </div>
+  <style>@keyframes authspin{to{transform:rotate(360deg)}}</style>
+  <div class="lc" style="display:none">
     <div class="logo-wrap">
       <div class="brand-mini">Arxitektura dizayn xizmatlari</div>
       <img class="logo-mark" src="logo.png" alt="VISART">
@@ -615,7 +624,10 @@ textarea.inp{resize:vertical;min-height:80px}
           <button class="eye-btn" onclick="togglePass('loginPassword','passEye')" id="passEye"><i class="ico"><svg><use href="#ic-eye"/></svg></i></button>
         </div>
       </div>
-      <div style="font-size:11.5px;color:var(--t4);margin:-6px 0 14px"><i class="ico"><svg><use href="#ic-lock"/></svg></i> Seansingiz xavfsiz tarzda saqlanadi</div>
+      <div style="display:flex;align-items:center;gap:8px;margin:-6px 0 14px">
+        <input type="checkbox" id="rememberMe" checked style="width:16px;height:16px;accent-color:var(--gold);cursor:pointer">
+        <label for="rememberMe" style="font-size:12px;color:var(--t3);cursor:pointer">Parolni eslab qolish</label>
+      </div>
       <button class="btn-main" id="loginBtn" onclick="doLogin()">Kirish</button>
       <div class="lerr" id="loginError"></div>
       <div class="lok" id="loginOk"></div>
@@ -680,8 +692,7 @@ textarea.inp{resize:vertical;min-height:80px}
       </div>
       <div class="seg-tabs">
         <button class="seg-btn on" id="xtSegList" onclick="switchXarajatlarTab('list')">Xarajatlar</button>
-        <button class="seg-btn" id="xtSegUsta" onclick="switchXarajatlarTab('ustalar')">Ustalar</button>
-        <button class="seg-btn" id="xtSegKont" onclick="switchXarajatlarTab('kontragent')">Boshqa</button>
+        <button class="seg-btn" id="xtSegUsta" onclick="switchXarajatlarTab('ustalar')">Usta pullari</button>
       </div>
       <div id="xarajatlarListWrap">
         <div class="ro-bar" id="xarajatReadonly" style="display:none"></div>
@@ -701,16 +712,9 @@ textarea.inp{resize:vertical;min-height:80px}
       <div id="xarajatlarUstaWrap" style="display:none">
         <div class="ph" style="padding:0 0 12px 0">
           <div class="ph-s" style="margin-top:0">Usta bilan kelishuv, avans va hisob-kitoblar</div>
-          <button class="btn-add" onclick="openUstaModal()">+ Yangi usta</button>
+          <button class="btn-add" id="btnAddUsta" onclick="openUstaModal()">+ Yangi usta</button>
         </div>
         <div id="ustaList"></div>
-      </div>
-      <div id="xarajatlarKontWrap" style="display:none">
-        <div class="ph" style="padding:0 0 12px 0">
-          <div class="ph-s" style="margin-top:0">Transport, asbob-uskuna, arxitektura va loyiha xizmatlari</div>
-          <button class="btn-add" onclick="openKontModal()">+ Yangi</button>
-        </div>
-        <div id="kontList"></div>
       </div>
     </div>
 
@@ -1446,6 +1450,7 @@ const SUBKATS_META={
     {n:'Asbob-uskuna',t:'ikki'},
     {n:'Arxitektura',t:'ikki'},
     {n:'Loyiha',t:'ikki'},
+    {n:'Mardikor',t:'ikki'},
     {n:'Boshqa',t:'ikki'}
   ]
 };
@@ -1673,17 +1678,41 @@ let DB={obyektlar:[],xarajatlar:[],tolovlar:[],zakazlar:[],xizmatTolovlar:[],ust
 // ─── BROWSER PUSH-BILDIRISHNOMA ───
 async function soraBildirishnomaRuxsati(){
   if(!('Notification' in window)){notify("Brauzeringiz bildirishnomani qo'llab-quvvatlamaydi");return;}
-  if(Notification.permission==='granted'){notify('Bildirishnomalar allaqachon yoqilgan');updateNotifToggleUI();return;}
   if(Notification.permission==='denied'){notify("Bildirishnoma bloklangan — brauzer sozlamalaridan ruxsat bering");updateNotifToggleUI();return;}
-  const perm=await Notification.requestPermission();
-  if(perm==='granted'){
-    localStorage.setItem('visart_notif_on','1');
-    notify('Bildirishnomalar yoqildi');
-    yuborBildirishnoma('VISART ArchDesign','Bildirishnomalar muvaffaqiyatli yoqildi');
-  }else{
-    notify('Ruxsat berilmadi');
+  if(Notification.permission!=='granted'){
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){notify('Ruxsat berilmadi');updateNotifToggleUI();return;}
   }
+  localStorage.setItem('visart_notif_on','1');
+  notify('Bildirishnomalar yoqildi');
+  await registerPushSubscription();
   updateNotifToggleUI();
+}
+// VAPID kalitni URL-safe base64'dan Uint8Array'ga o'giradi (pushManager talabi)
+function urlBase64ToUint8Array(base64String){
+  const padding='='.repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(base64);
+  return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
+}
+const VAPID_PUBLIC_KEY='BLtYtK1CT7Q3RWli2sx0LZzDZ7nZ-Yuvd_fOv8weDyZ5rmtLjBA-deaggjRLTNWD4FCemcY19ewUzBKFl7W3NwQ';
+// Haqiqiy fon-bildirishnoma uchun brauzerga obuna yozamiz va Supabase'ga saqlaymiz
+async function registerPushSubscription(){
+  try{
+    if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+    if(!currentUser||currentUser.rol==='superadmin')return;
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub){
+      sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)});
+    }
+    const raw=sub.toJSON();
+    await callManageAuth('save_push_subscription',{
+      endpoint:raw.endpoint,p256dh:raw.keys.p256dh,authKey:raw.keys.auth,
+      rol:currentUser.rol,login:currentUser.login,kompaniyaId:currentUser.kompaniyaId,
+      obyektId:currentUser.rol==='mijoz'?currentUser.obyektId:null
+    });
+  }catch(e){console.error('Push obunasi xatosi:',e);}
 }
 function bildirishnomaYoqilganmi(){
   return('Notification' in window)&&Notification.permission==='granted'&&localStorage.getItem('visart_notif_on')==='1';
@@ -1957,7 +1986,7 @@ const RU={
 "Juda ko'p noto'g'ri urinish. 15 daqiqadan keyin qayta urining.":"Слишком много неверных попыток. Повторите через 15 минут.",
 "Kodni tahrirlash":"Изменить код","Faollashtirish":"Активировать","Bloklash":"Заблокировать","Kompaniyani butunlay o'chirish":"Удалить компанию полностью",
 "Davom etish":"Продолжить","Ha, butunlay o'chirish":"Да, удалить полностью","Kompaniya butunlay o'chirildi":"Компания полностью удалена",
-"Ustalar":"Мастера","Usta bilan kelishuv, avans va hisob-kitoblar":"Договорённость с мастером, авансы и расчёты","+ Yangi usta":"+ Новый мастер",
+"Usta pullari":"Оплата мастерам","Usta bilan kelishuv, avans va hisob-kitoblar":"Договорённость с мастером, авансы и расчёты","+ Yangi usta":"+ Новый мастер",
 "Yangi Usta":"Новый мастер","Ustani Tahrirlash":"Редактировать мастера","Usta ismi":"Имя мастера","Mutaxassisligi":"Специальность","Kelishilgan summa (so'm)":"Согласованная сумма (сум)","Boshlanish sanasi":"Дата начала",
 "Usta bilan kelishilgan umumiy summani kiriting. Keyin bergan har bir to'lovingizni (avans, yakuniy hisob-kitob) alohida qo'shib borasiz — qoldiq avtomatik hisoblanadi.":"Укажите общую сумму, согласованную с мастером. Затем добавляйте каждый платёж (аванс, окончательный расчёт) отдельно — остаток считается автоматически.",
 "To'lov qo'shish":"Добавить платёж","Summa (so'm)":"Сумма (сум)","To'lov turi":"Тип платежа","Avans (ish tugallanmagan)":"Аванс (работа не завершена)","Yakuniy hisob-kitob (ish tugallangan)":"Окончательный расчёт (работа завершена)","Oddiy to'lov":"Обычный платёж",
@@ -1980,7 +2009,7 @@ const RU={
 "Yakuniy summa hali belgilanmagan — ish tugagach \"Yakuniy hisob-kitob\" tugmasi orqali belgilang.":"Итоговая сумма ещё не определена — укажите её после завершения работы через кнопку «Окончательный расчёт».",
 "Hisoblangan hajm":"Расчётный объём","Yakuniy hisob-kitob saqlandi":"Окончательный расчёт сохранён",
 "Miqdor va narxni to'g'ri kiriting":"Введите корректные количество и цену",
-"Boshqa":"Другое","Transport":"Транспорт","Asbob-uskuna":"Инструменты/оборудование","Arxitektura":"Архитектура","Loyiha":"Проект",
+"Boshqa":"Другое","Transport":"Транспорт","Asbob-uskuna":"Инструменты/оборудование","Arxitektura":"Архитектура","Loyiha":"Проект","Mardikor":"Разнорабочий",
 "Transport, asbob-uskuna, arxitektura va loyiha xizmatlari":"Транспорт, оборудование, архитектурные и проектные услуги",
 "Transport, asbob-uskuna, arxitektura yoki loyiha xizmati uchun. Summa oldindan aniq bo'lmasa bo'sh qoldiring — keyin \"Yakuniy hisob-kitob\" orqali belgilaysiz.":"Для транспорта, оборудования, архитектурных или проектных услуг. Если сумма заранее неизвестна — оставьте пустым, определите позже через «Окончательный расчёт».",
 "Nomi":"Название","Masalan: Toshkent-Transport MChJ":"Например: ООО Ташкент-Транспорт","Turi":"Тип",
@@ -2021,7 +2050,41 @@ function setLang(l){
   if(sw)sw.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));
   if(currentUser){if(currentUser.rol==='superadmin'){renderSuperadminKompaniyalar&&switchView(activeView);}else{initApp();switchView(activeView);}}
 }
+// ─── "Parolni eslab qolish" belgisi o'chirilgan bo'lsa — ilova yopilganda seansni tugatamiz ───
+window.addEventListener('pagehide',()=>{
+  if(sessionStorage.getItem('visart_no_remember')==='1'){
+    try{sb.auth.signOut();}catch(e){}
+  }
+});
+
 document.documentElement.lang=LANG;
+
+// ─── Telefon "Orqaga" tugmasi: ochiq modalni yopadi, ilovadan chiqmaydi ───
+let _openModalStack=[];
+const _modalObserver=new MutationObserver((mutations)=>{
+  mutations.forEach(m=>{
+    if(m.attributeName!=='class')return;
+    const el=m.target;
+    if(!el.classList||!el.classList.contains('mo'))return;
+    const isOpen=el.classList.contains('on');
+    const idx=_openModalStack.indexOf(el.id);
+    if(isOpen&&idx===-1){
+      _openModalStack.push(el.id);
+      history.pushState({visartModal:el.id},'');
+    }else if(!isOpen&&idx!==-1){
+      _openModalStack.splice(idx,1);
+    }
+  });
+});
+document.querySelectorAll('.mo').forEach(el=>_modalObserver.observe(el,{attributes:true,attributeFilter:['class']}));
+window.addEventListener('popstate',()=>{
+  if(_openModalStack.length){
+    const lastId=_openModalStack[_openModalStack.length-1];
+    const el=document.getElementById(lastId);
+    if(el)el.classList.remove('on');
+  }
+  // Modal ochiq bo'lmasa — brauzerning o'z navigatsiyasiga (odatda ilovani orqa fonga o'tkazish) ruxsat beramiz.
+});
 translateStatic(); // login ekranini darhol tarjima qilish
 
 // 4.1: pul — doim butun so'mgacha yaxlitlanadi (float xatolarining oldini oladi)
@@ -2128,25 +2191,33 @@ async function doLogin(){
         await sb.auth.signOut();currentUser=null;return;
       }
     }
+    const rememberEl=document.getElementById('rememberMe');
+    if(rememberEl&&!rememberEl.checked)sessionStorage.setItem('visart_no_remember','1');
+    else sessionStorage.removeItem('visart_no_remember');
     await startApp();
   }catch(e){console.error(e);showErr('loginError',e&&e.message?e.message:'Ulanishda xato — internetni yoki Supabase sozlamalarini tekshiring');}
   finally{if(btn){btn.disabled=false;btn.textContent='Kirish';}}
 }
+function revealLoginForm(){
+  const splash=document.getElementById('authSplash');if(splash)splash.style.display='none';
+  const lc=document.querySelector('.lc');if(lc)lc.style.display='';
+}
 async function tryAutoLogin(){
   try{
     const{data:{session}}=await withTimeout(sb.auth.getSession(),12000,"Sessiya tekshirishda vaqt tugadi");
-    if(!session)return;
+    if(!session){revealLoginForm();return;}
     const ok=await withTimeout(loadCurrentProfile(),12000,"Profilni yuklashda vaqt tugadi");
-    if(!ok)return;
+    if(!ok){revealLoginForm();return;}
     if(currentUser.rol!=='superadmin'&&currentUser.kompaniyaId){
       const{data:komp}=await withTimeout(sb.from('kompaniyalar').select('faol').eq('id',currentUser.kompaniyaId).maybeSingle(),12000,"Server javob bermayapti");
-      if(komp&&komp.faol===false){await sb.auth.signOut();currentUser=null;showErr('loginError','Kompaniyangiz vaqtincha bloklangan. Administrator bilan bog\'laning.');return;}
+      if(komp&&komp.faol===false){await sb.auth.signOut();currentUser=null;revealLoginForm();showErr('loginError','Kompaniyangiz vaqtincha bloklangan. Administrator bilan bog\'laning.');return;}
     }
     await startApp();
   }catch(e){
     console.error(e);
     // Avtomatik kirish muvaffaqiyatsiz bo'lsa — jim login ekraniga qaytaramiz,
     // lekin sabab konsolda qoladi va foydalanuvchi login formasidan qo'lda urinishi mumkin.
+    revealLoginForm();
     showErr('loginError',(e&&e.message)||'Ulanishda xato — internetni tekshirib qayta urining');
   }
 }
@@ -2180,6 +2251,7 @@ async function startApp(){
   if(sw)sw.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.l===LANG));
   if(currentUser.rol==='superadmin'){initSuperadminApp();translateStatic();return;}
   await refreshDB();initApp();subscribeRealtime();translateStatic();
+  if(bildirishnomaYoqilganmi())registerPushSubscription();
 }
 async function signOutAllDevices(){
   if(!await askConfirm('Barcha qurilmalarda (shu jumladan bu yerda) sessiya yopiladi va qayta kirish kerak bo\'ladi. Davom etasizmi?',{okText:'Chiqish'}))return;
@@ -2211,6 +2283,7 @@ function initApp(){
   document.getElementById('btnAddXarajat').style.display=isM?'none':'flex';
   document.getElementById('btnAddTolov').style.display=isM?'none':'flex';
   document.getElementById('btnAddZakaz').style.display=isM?'none':'flex';
+  document.getElementById('btnAddUsta').style.display=isM?'none':'flex';
   document.getElementById('chatObjSelectWrap').style.display=currentUser.rol==='prorab'?'block':'none';
   switchView('kassa');
   checkUnreadChat();
@@ -2402,7 +2475,6 @@ function switchView(id){
   if(id==='tolovlar')renderTolovlar();
   if(id==='zakaz')renderZakaz();
   if(id==='xarajatlar'&&xarajatlarTab==='ustalar')renderUstalar();
-  if(id==='xarajatlar'&&xarajatlarTab==='kontragent')renderKontragentlar();
   if(id==='obyektlar')renderObyektlar();
   if(id==='profil')renderProfil();
   if(id==='chat')initChat();
@@ -2538,9 +2610,9 @@ function renderKassa(){
       <div class="cl">
         ${catRow('qurilish','Qurilish mollari','#B08D57',qr,subDetail('Qurilish mollari'))}
         ${qu>0?catRow('usta-eski',"Usta haqqi (eski yozuvlar)",'#8C6D3F',qu,subDetail('Usta haqqi')):''}
-        ${catRow('ustalar','<i class="ico"><svg><use href="#ic-user"/></svg></i> Ustalarga to\'langan','#8C6D3F',jUstaTolov,ustaDetail)}
-        ${qb>0?catRow('boshqa-eski',"Boshqa xarajatlar (eski yozuvlar)",'#A39D8E',qb,subDetail('Boshqa xarajatlar')):''}
-        ${catRow('kontragent','<i class="ico"><svg><use href="#ic-clipboard"/></svg></i> Boshqa xarajatlar','#A39D8E',jKontTolov,kontDetail)}
+        ${catRow('ustalar','<i class="ico"><svg><use href="#ic-user"/></svg></i> Usta pullari','#8C6D3F',jUstaTolov,ustaDetail)}
+        ${catRow('boshqa',"Boshqa xarajatlar",'#A39D8E',qb,subDetail('Boshqa xarajatlar'))}
+        ${jKontTolov>0?catRow('kontragent-eski',"Boshqa xarajatlar (eski tizim yozuvlari)",'#A39D8E',jKontTolov,kontDetail):''}
         ${catRow('buyurtma',"Buyurtma mahsulotlar",'#C9A96E',jZakAvans,zakDetail)}
       </div>
       ${ob.xizmatTuri!=='yoq'?`
@@ -2596,13 +2668,10 @@ function switchXarajatlarTab(tab){
   xarajatlarTab=tab;
   document.getElementById('xtSegList').classList.toggle('on',tab==='list');
   document.getElementById('xtSegUsta').classList.toggle('on',tab==='ustalar');
-  document.getElementById('xtSegKont').classList.toggle('on',tab==='kontragent');
   document.getElementById('xarajatlarListWrap').style.display=tab==='list'?'block':'none';
   document.getElementById('xarajatlarUstaWrap').style.display=tab==='ustalar'?'block':'none';
-  document.getElementById('xarajatlarKontWrap').style.display=tab==='kontragent'?'block':'none';
   document.getElementById('btnAddXarajat').style.display=tab==='list'?'':'none';
   if(tab==='ustalar')renderUstalar();
-  if(tab==='kontragent')renderKontragentlar();
 }
 function renderXarajatlar(){
   let list=getXar();
@@ -3689,7 +3758,7 @@ async function exportObyektPDF(id,opts={}){
         ];
       });
       drawTable(
-        'USTALAR',
+        'USTA PULLARI',
         ['Ismi','Mutaxassislik','Kelishilgan','Olingan avans','Qoldiq','Holat'],
         [40,32,30,30,30,pageW-marginX*2-40-32-30-30-30],
         ustaRows,
@@ -3868,10 +3937,7 @@ function updateSubkat(){
   const obId=document.getElementById('fObyekt').value;
   const ob=DB.obyektlar.find(o=>o.id===obId);
   const obyektTuri=ob?ob.obyektTuri:'ikki';
-  let list=subkatsForObyektTuri(k,obyektTuri);
-  // Transport/Asbob-uskuna/Arxitektura/Loyiha endi "Boshqa xarajatlar" (Kontragentlar) bo'limiga ko'chirilgan —
-  // yangi yozuvlarda faqat "Boshqa" qoladi (eski yozuvlarni tahrirlashda to'liq ro'yxat saqlanadi)
-  if(k==='Boshqa xarajatlar')list=list.filter(s=>s==='Boshqa');
+  const list=subkatsForObyektTuri(k,obyektTuri);
   document.getElementById('fSubkat').innerHTML=list.map(s=>`<option>${esc(s)}</option>`).join('');
   fillBirlikSelect('fBirlik',k);
   toggleUstaBosqichUI(k,'fUstaBosqichWrap','fUstaBosqich','fIzoh');
