@@ -702,7 +702,7 @@ textarea.inp{resize:vertical;min-height:80px}
           <input class="inp fsel" type="search" id="xfSearch" placeholder="Qidirish: mahsulot, izoh..." oninput="applyXarFilter()" style="flex:1 1 100%" aria-label="Xarajatlarni qidirish">
           <select class="inp fsel" id="xfKat" onchange="updateXarFilterSubkat();applyXarFilter()">
             <option value="">Barcha kategoriya</option>
-            <option>Qurilish mollari</option><option>Usta haqqi</option><option>Boshqa xarajatlar</option>
+            <option>Qurilish mollari</option><option>Boshqa xarajatlar</option>
           </select>
           <select class="inp fsel" id="xfSubkat" onchange="applyXarFilter()"><option value="">Barcha bo'lim</option></select>
           <input class="inp fsel" type="date" id="xfSanaDan" onchange="applyXarFilter()" title="Sanadan">
@@ -1220,17 +1220,38 @@ textarea.inp{resize:vertical;min-height:80px}
         <div class="fg"><label class="fl">Kategoriya</label><select class="inp" id="eXarKat" onchange="updateEditSubkat()"><option>Qurilish mollari</option><option>Usta haqqi</option><option>Boshqa xarajatlar</option></select></div>
         <div class="fg"><label class="fl">Sub-kategoriya</label><select class="inp" id="eXarSubkat"></select></div>
       </div>
-      <div class="fg"><label class="fl">Mahsulot nomi</label><input class="inp" type="text" id="eXarMahsulot"></div>
+      <div class="fg" id="eXarMollariWrap"><label class="fl">Mahsulot nomi</label><input class="inp" type="text" id="eXarMahsulot"></div>
       <div class="fg" id="eXarUstaBosqichWrap" style="display:none">
         <label class="fl">To'lov bosqichi</label>
         <select class="inp" id="eXarUstaBosqich" onchange="applyUstaBosqichToIzoh('eXarUstaBosqich','eXarIzoh')"></select>
       </div>
-      <div class="fr3">
-        <div class="fg"><label class="fl">O'lchov</label><select class="inp" id="eXarBirlik"><option>dona</option><option>kg</option><option>metr</option><option>litr</option><option>m²</option><option>m³</option><option>to'plam</option></select></div>
-        <div class="fg"><label class="fl">Narxi</label><input class="inp" type="number" id="eXarNarx" oninput="calcEditJami()"></div>
-        <div class="fg"><label class="fl">Miqdori</label><input class="inp" type="number" id="eXarMiqdor" oninput="calcEditJami()"></div>
+      <div id="eXarMollariFields">
+        <div class="fr3">
+          <div class="fg"><label class="fl">O'lchov</label><select class="inp" id="eXarBirlik"><option>dona</option><option>kg</option><option>metr</option><option>litr</option><option>m²</option><option>m³</option><option>to'plam</option></select></div>
+          <div class="fg"><label class="fl">Narxi</label><input class="inp" type="number" id="eXarNarx" oninput="calcEditJami()"></div>
+          <div class="fg"><label class="fl">Miqdori</label><input class="inp" type="number" id="eXarMiqdor" oninput="calcEditJami()"></div>
+        </div>
+        <div class="fg"><label class="fl">Jami</label><input class="inp" type="text" id="eXarJami" readonly style="font-weight:700;color:var(--gold-d);font-size:16px"></div>
       </div>
-      <div class="fg"><label class="fl">Jami</label><input class="inp" type="text" id="eXarJami" readonly style="font-weight:700;color:var(--gold-d);font-size:16px"></div>
+      <div id="eXarBoshqaWrap" style="display:none">
+        <div class="fg">
+          <label class="fl">To'lov turi</label>
+          <div class="seg-tabs">
+            <button type="button" class="seg-btn on" id="eXarBoshqaSegToliq" onclick="switchEXarBoshqaMode('toliq')">To'liq narx</button>
+            <button type="button" class="seg-btn" id="eXarBoshqaSegAvans" onclick="switchEXarBoshqaMode('avans')">Avans</button>
+          </div>
+        </div>
+        <div id="eXarBoshqaToliqWrap">
+          <div class="fg"><label class="fl">Umumiy narx</label><input class="inp" type="number" id="eXarBoshqaUmumiy" oninput="calcEXarBoshqaJami()"></div>
+        </div>
+        <div id="eXarBoshqaAvansWrap" style="display:none">
+          <div class="fr">
+            <div class="fg"><label class="fl">Umumiy kelishilgan narx</label><input class="inp" type="number" id="eXarBoshqaKelishilgan" oninput="calcEXarBoshqaJami()"></div>
+            <div class="fg"><label class="fl">Berilgan avans</label><input class="inp" type="number" id="eXarBoshqaAvans" oninput="calcEXarBoshqaJami()"></div>
+          </div>
+          <div class="fg"><label class="fl">Qoldiq — avtomatik</label><input class="inp" type="text" id="eXarBoshqaQoldiq" readonly style="font-weight:700;color:var(--t2)"></div>
+        </div>
+      </div>
       <div class="fg">
         <label class="fl">Chek rasmlari (ixtiyoriy, bir nechta)</label>
         <input type="hidden" id="eXarRasmUrl">
@@ -4197,6 +4218,15 @@ function openEditXarajat(id){
   document.getElementById('eXarJami').value=fmt(x.jami);document.getElementById('eXarIzoh').value=x.izoh||'';
   const _bosqichSel=document.getElementById('eXarUstaBosqich');
   if(_bosqichSel){const m=(x.izoh||'').match(/^\[([^\]]*)\]/);if(m&&TOLOV_BOSQICH.includes(m[1]))_bosqichSel.value=m[1];else _bosqichSel.value='';}
+  if(x.kat==='Boshqa xarajatlar'&&x.tolovTuri==='avans'){
+    switchEXarBoshqaMode('avans');
+    document.getElementById('eXarBoshqaKelishilgan').value=x.umumiyNarx||'';
+    document.getElementById('eXarBoshqaAvans').value=x.jami||'';
+    calcEXarBoshqaJami();
+  }else{
+    switchEXarBoshqaMode('toliq');
+    document.getElementById('eXarBoshqaUmumiy').value=x.kat==='Boshqa xarajatlar'?(x.jami||''):'';
+  }
   document.getElementById('eXarRasmUrl').value=x.rasmUrl||'';
   document.getElementById('eXarRasmlarQoshimcha').value=x.rasmlarQoshimcha||'[]';
   document.getElementById('eImgUploadStatus').textContent='';
@@ -4212,23 +4242,54 @@ function updateEditSubkat(){
   document.getElementById('eXarSubkat').innerHTML=list.map(s=>`<option>${esc(s)}</option>`).join('');
   fillBirlikSelect('eXarBirlik',k);
   toggleUstaBosqichUI(k,'eXarUstaBosqichWrap','eXarUstaBosqich','eXarIzoh');
+  const isBoshqa=k==='Boshqa xarajatlar';
+  document.getElementById('eXarMollariWrap').style.display=isBoshqa?'none':'block';
+  document.getElementById('eXarMollariFields').style.display=isBoshqa?'none':'block';
+  document.getElementById('eXarBoshqaWrap').style.display=isBoshqa?'block':'none';
+}
+let eXarBoshqaMode='toliq';
+function switchEXarBoshqaMode(mode){
+  eXarBoshqaMode=mode;
+  document.getElementById('eXarBoshqaSegToliq').classList.toggle('on',mode==='toliq');
+  document.getElementById('eXarBoshqaSegAvans').classList.toggle('on',mode==='avans');
+  document.getElementById('eXarBoshqaToliqWrap').style.display=mode==='toliq'?'block':'none';
+  document.getElementById('eXarBoshqaAvansWrap').style.display=mode==='avans'?'block':'none';
+  calcEXarBoshqaJami();
+}
+function calcEXarBoshqaJami(){
+  if(eXarBoshqaMode==='avans'){
+    const kelishilgan=parseFloat(document.getElementById('eXarBoshqaKelishilgan').value)||0;
+    const avans=parseFloat(document.getElementById('eXarBoshqaAvans').value)||0;
+    document.getElementById('eXarBoshqaQoldiq').value=fmt(money(Math.max(0,kelishilgan-avans)));
+  }
 }
 function calcEditJami(){const n=parseFloat(document.getElementById('eXarNarx').value)||0,m=parseFloat(document.getElementById('eXarMiqdor').value)||0;document.getElementById('eXarJami').value=n&&m?fmt(n*m):'';}
 async function saveEditXarajat(){
   const id=document.getElementById('eXarId').value;
   const kat=document.getElementById('eXarKat').value;
-  const mahsulot=document.getElementById('eXarMahsulot').value.trim();
   const idx=DB.xarajatlar.findIndex(x=>x.id===id);if(idx===-1)return;
   const old=DB.xarajatlar[idx];
   const eski=old.jami;
   let x;
-  if(kat==='Boshqa xarajatlar'&&old.tolovTuri){
-    // Yangi tizim (to'liq/avans) yozuvi — narx/miqdor/mahsulot majburiy emas, mavjud summalar saqlanadi
-    x={...old,obyektId:document.getElementById('eXarObyekt').value,sana:document.getElementById('eXarSana').value,kat,subkat:document.getElementById('eXarSubkat').value,izoh:document.getElementById('eXarIzoh').value,rasmUrl:document.getElementById('eXarRasmUrl').value||null,rasmlarQoshimcha:document.getElementById('eXarRasmlarQoshimcha').value||'[]'};
+  if(kat==='Boshqa xarajatlar'){
+    let jami,umumiyNarx=null;
+    if(eXarBoshqaMode==='toliq'){
+      const umumiy=money(parseFloat(document.getElementById('eXarBoshqaUmumiy').value));
+      if(!validSumma(umumiy)){notify("Umumiy narxni to'g'ri kiriting");return;}
+      jami=umumiy;
+    }else{
+      const kelishilgan=money(parseFloat(document.getElementById('eXarBoshqaKelishilgan').value));
+      const avans=money(parseFloat(document.getElementById('eXarBoshqaAvans').value));
+      if(!validSumma(kelishilgan)){notify("Umumiy kelishilgan narxni to'g'ri kiriting");return;}
+      if(!validSumma(avans)){notify("Berilgan avansni to'g'ri kiriting");return;}
+      if(avans>kelishilgan){notify("Avans umumiy narxdan katta bo'lishi mumkin emas");return;}
+      jami=avans;umumiyNarx=kelishilgan;
+    }
+    x={...old,obyektId:document.getElementById('eXarObyekt').value,sana:document.getElementById('eXarSana').value,kat,subkat:document.getElementById('eXarSubkat').value,mahsulot:document.getElementById('eXarSubkat').value,birlik:null,narx:null,miqdor:null,jami,umumiyNarx,tolovTuri:eXarBoshqaMode,izoh:document.getElementById('eXarIzoh').value,rasmUrl:document.getElementById('eXarRasmUrl').value||null,rasmlarQoshimcha:document.getElementById('eXarRasmlarQoshimcha').value||'[]'};
   }else{
-    const narx=parseFloat(document.getElementById('eXarNarx').value),miqdor=parseFloat(document.getElementById('eXarMiqdor').value);
+    const narx=parseFloat(document.getElementById('eXarNarx').value),miqdor=parseFloat(document.getElementById('eXarMiqdor').value),mahsulot=document.getElementById('eXarMahsulot').value.trim();
     if(!mahsulot||!narx||!miqdor){notify("Maydonlarni to'ldiring");return;}
-    x={...old,obyektId:document.getElementById('eXarObyekt').value,sana:document.getElementById('eXarSana').value,kat,subkat:document.getElementById('eXarSubkat').value,mahsulot,birlik:document.getElementById('eXarBirlik').value,narx,miqdor,jami:Math.round(narx*miqdor),izoh:document.getElementById('eXarIzoh').value,rasmUrl:document.getElementById('eXarRasmUrl').value||null,rasmlarQoshimcha:document.getElementById('eXarRasmlarQoshimcha').value||'[]'};
+    x={...old,obyektId:document.getElementById('eXarObyekt').value,sana:document.getElementById('eXarSana').value,kat,subkat:document.getElementById('eXarSubkat').value,mahsulot,birlik:document.getElementById('eXarBirlik').value,narx,miqdor,jami:Math.round(narx*miqdor),umumiyNarx:null,tolovTuri:null,izoh:document.getElementById('eXarIzoh').value,rasmUrl:document.getElementById('eXarRasmUrl').value||null,rasmlarQoshimcha:document.getElementById('eXarRasmlarQoshimcha').value||'[]'};
   }
   const{error}=await sb.from('xarajatlar').update(xarToRow(x)).eq('id',id);
   if(error){notify('Xato');console.error(error);return;}
