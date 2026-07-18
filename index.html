@@ -1926,7 +1926,8 @@ function subscribeRealtime(){
     })
     .on('postgres_changes',{event:'*',schema:'public',table:'xarajatlar'},(payload)=>{
       const r=payload.new;
-      if(!myCompanyEvent(r||payload.old))return;
+      console.log('[VISART Realtime] xarajat hodisasi keldi:',payload.eventType,'kompaniya_id:',r&&r.kompaniya_id,'| mening kompaniyam:',currentUser&&currentUser.kompaniyaId);
+      if(!myCompanyEvent(r||payload.old)){console.warn('[VISART Realtime] rad etildi — kompaniya mos kelmadi');return;}
       applyRowEvent(DB.xarajatlar,xarRow,payload);scheduleRerender();
       if(payload.eventType==='INSERT'&&currentUser&&r){
         setNavBadge('xarajatlar');
@@ -1956,7 +1957,11 @@ function subscribeRealtime(){
         yuborBildirishnoma(`Yangi xabar: ${esc(r.from_ism)}`,r.matn.slice(0,80));
       }
     })
-    .subscribe();
+    .subscribe((status,err)=>{
+      console.log('[VISART Realtime] holat:',status,err||'');
+      if(status==='SUBSCRIBED')console.log('[VISART Realtime] ULANDI ✅ — kompaniya:',currentUser&&currentUser.kompaniyaId);
+      if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED')console.error('[VISART Realtime] ULANMADI ❌:',status,err);
+    });
 }
 function unsubscribeRealtime(){if(_rtChannel){sb.removeChannel(_rtChannel);_rtChannel=null;}}
 function rerenderCurrentView(){
