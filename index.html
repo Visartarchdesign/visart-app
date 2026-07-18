@@ -146,6 +146,8 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--t1);min-height:100vh;f
 .bn-item .ico{font-size:21px}
 .bn-item span{font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .bn-item.on{color:var(--gold-d)}
+.bn-item .ico{position:relative}
+.bn-dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;background:#D64545;border-radius:50%;border:1.5px solid var(--bg);box-shadow:0 0 0 1px rgba(0,0,0,.05)}
 .bn-item.on span{font-weight:700}
 .bn-badge{position:absolute;top:2px;right:18%;min-width:14px;height:14px;background:var(--err);color:#fff;font-size:9px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-weight:700;padding:0 3px}
 
@@ -879,7 +881,7 @@ textarea.inp{resize:vertical;min-height:80px}
         <div class="fg"><label class="fl">Kategoriya</label><select class="inp" id="fKategoriya" onchange="updateSubkat()"><option>Qurilish mollari</option><option>Boshqa xarajatlar</option></select></div>
         <div class="fg"><label class="fl">Sub-kategoriya</label><select class="inp" id="fSubkat"></select></div>
       </div>
-      <div class="fg">
+      <div class="fg" id="fMollariWrap">
         <label class="fl">Mahsulot / Xizmat nomi</label>
         <div style="position:relative">
           <input class="inp" type="text" id="fMahsulot" placeholder="Sement M400" style="padding-right:42px">
@@ -894,12 +896,33 @@ textarea.inp{resize:vertical;min-height:80px}
         <select class="inp" id="fUstaBosqich" onchange="applyUstaBosqichToIzoh('fUstaBosqich','fIzoh')"></select>
         <div class="fl-hint">Usta ishi hali tugallanmagan bo'lsa — Avans, ish yakunlanib hisob qilinsa — Yakuniy hisob-kitobni tanlang</div>
       </div>
-      <div class="fr3">
-        <div class="fg"><label class="fl">O'lchov</label><select class="inp" id="fBirlik"><option>dona</option><option>kg</option><option>metr</option><option>litr</option><option>m²</option><option>m³</option><option>to'plam</option></select></div>
-        <div class="fg"><label class="fl">Narxi</label><input class="inp" type="number" id="fNarx" placeholder="15 000" oninput="calcJami()"></div>
-        <div class="fg"><label class="fl">Miqdori</label><input class="inp" type="number" id="fMiqdor" placeholder="50" oninput="calcJami()"></div>
+      <div id="fMollariFields">
+        <div class="fr3">
+          <div class="fg"><label class="fl">O'lchov</label><select class="inp" id="fBirlik"><option>dona</option><option>kg</option><option>metr</option><option>litr</option><option>m²</option><option>m³</option><option>to'plam</option></select></div>
+          <div class="fg"><label class="fl">Narxi</label><input class="inp" type="number" id="fNarx" placeholder="15 000" oninput="calcJami()"></div>
+          <div class="fg"><label class="fl">Miqdori</label><input class="inp" type="number" id="fMiqdor" placeholder="50" oninput="calcJami()"></div>
+        </div>
+        <div class="fg"><label class="fl">Jami — avtomatik</label><input class="inp" type="text" id="fJami" readonly style="font-weight:700;color:var(--gold-d);font-size:16px"></div>
       </div>
-      <div class="fg"><label class="fl">Jami — avtomatik</label><input class="inp" type="text" id="fJami" readonly style="font-weight:700;color:var(--gold-d);font-size:16px"></div>
+      <div id="fBoshqaWrap" style="display:none">
+        <div class="fg">
+          <label class="fl">To'lov turi</label>
+          <div class="seg-tabs">
+            <button type="button" class="seg-btn on" id="fBoshqaSegToliq" onclick="switchBoshqaTolovMode('toliq')">To'liq narx</button>
+            <button type="button" class="seg-btn" id="fBoshqaSegAvans" onclick="switchBoshqaTolovMode('avans')">Avans</button>
+          </div>
+        </div>
+        <div id="fBoshqaToliqWrap">
+          <div class="fg"><label class="fl">Umumiy narx</label><input class="inp" type="number" id="fBoshqaUmumiy" placeholder="1 000 000"></div>
+        </div>
+        <div id="fBoshqaAvansWrap" style="display:none">
+          <div class="fr">
+            <div class="fg"><label class="fl">Umumiy kelishilgan narx</label><input class="inp" type="number" id="fBoshqaKelishilgan" placeholder="5 000 000" oninput="calcBoshqaQoldiq()"></div>
+            <div class="fg"><label class="fl">Berilgan avans</label><input class="inp" type="number" id="fBoshqaAvans" placeholder="2 000 000" oninput="calcBoshqaQoldiq()"></div>
+          </div>
+          <div class="fg"><label class="fl">Qoldiq — avtomatik</label><input class="inp" type="text" id="fBoshqaQoldiq" readonly style="font-weight:700;color:var(--t2)"></div>
+        </div>
+      </div>
       <div class="fg">
         <label class="fl">Chek rasmlari (ixtiyoriy, bir nechta)</label>
         <input type="hidden" id="fRasmUrl">
@@ -1518,8 +1541,8 @@ async function callManageAuth(action,payload){
 // Baza <-> Ilova maydon nomlarini moslashtirish (snake_case <-> camelCase)
 function obRow(r){return{id:r.id,nom:r.nom,mijozIsm:r.mijoz_ism,mijozLogin:r.mijoz_login,mijozTel:r.mijoz_tel,maydon:r.maydon,sana:r.sana,holat:r.holat,prorabLogin:r.prorab_login,smeta:Number(r.smeta)||0,xizmatTuri:r.xizmat_turi||'yoq',xizmatFoiz:Number(r.xizmat_foiz)||0,xizmatOylik:Number(r.xizmat_oylik)||0,obyektTuri:r.obyekt_turi||'ikki',tugashSana:r.tugash_sana||''};}
 function obToRow(o){return{id:o.id,nom:o.nom,mijoz_ism:o.mijozIsm,mijoz_login:o.mijozLogin,mijoz_tel:o.mijozTel,maydon:o.maydon,sana:o.sana,holat:o.holat,prorab_login:o.prorabLogin,smeta:o.smeta||0,xizmat_turi:o.xizmatTuri||'yoq',xizmat_foiz:o.xizmatFoiz||0,xizmat_oylik:o.xizmatOylik||0,obyekt_turi:o.obyektTuri||'ikki',tugash_sana:o.tugashSana||null,kompaniya_id:currentUser.kompaniyaId};}
-function xarRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,kat:r.kat,subkat:r.subkat,mahsulot:r.mahsulot,birlik:r.birlik,narx:Number(r.narx),miqdor:Number(r.miqdor),jami:Number(r.jami),izoh:r.izoh,rasmUrl:r.rasm_url,rasmlarQoshimcha:r.rasmlar_qoshimcha||'[]'};}
-function xarToRow(x){return{id:x.id,obyekt_id:x.obyektId,sana:x.sana,kat:x.kat,subkat:x.subkat,mahsulot:x.mahsulot,birlik:x.birlik,narx:x.narx,miqdor:x.miqdor,jami:x.jami,izoh:x.izoh,rasm_url:x.rasmUrl||null,rasmlar_qoshimcha:x.rasmlarQoshimcha||'[]',kompaniya_id:currentUser.kompaniyaId};}
+function xarRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,kat:r.kat,subkat:r.subkat,mahsulot:r.mahsulot,birlik:r.birlik,narx:r.narx!=null?Number(r.narx):null,miqdor:r.miqdor!=null?Number(r.miqdor):null,jami:Number(r.jami),izoh:r.izoh,rasmUrl:r.rasm_url,rasmlarQoshimcha:r.rasmlar_qoshimcha||'[]',umumiyNarx:r.umumiy_narx!=null?Number(r.umumiy_narx):null,tolovTuri:r.tolov_turi||null};}
+function xarToRow(x){return{id:x.id,obyekt_id:x.obyektId,sana:x.sana,kat:x.kat,subkat:x.subkat,mahsulot:x.mahsulot,birlik:x.birlik,narx:x.narx,miqdor:x.miqdor,jami:x.jami,izoh:x.izoh,rasm_url:x.rasmUrl||null,rasmlar_qoshimcha:x.rasmlarQoshimcha||'[]',kompaniya_id:currentUser.kompaniyaId,umumiy_narx:x.umumiyNarx!=null?x.umumiyNarx:null,tolov_turi:x.tolovTuri||null};}
 function tolRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,summa:Number(r.summa),turi:r.turi,izoh:r.izoh};}
 function tolToRow(t){return{id:t.id,obyekt_id:t.obyektId,sana:t.sana,summa:t.summa,turi:t.turi,izoh:t.izoh,kompaniya_id:currentUser.kompaniyaId};}
 function zakRow(r){return{id:r.id,obyektId:r.obyekt_id,nomi:r.nomi,turi:r.turi,taminotchi:r.taminotchi,umumiy:Number(r.umumiy),avans:Number(r.avans),sana:r.sana,tayyorSana:r.tayyor_sana,holat:r.holat,izoh:r.izoh};}
@@ -1540,7 +1563,7 @@ async function loadDB(){
   const mine=currentUser&&currentUser.rol==='mijoz'?currentUser.obyektId:null;
   const f=q=>mine?q.eq('obyekt_id',mine):q;
   const OB_COLS='id,nom,mijoz_ism,mijoz_login,mijoz_tel,maydon,sana,holat,prorab_login,smeta,xizmat_turi,xizmat_foiz,xizmat_oylik,obyekt_turi,tugash_sana';
-  const XA_COLS='id,obyekt_id,sana,kat,subkat,mahsulot,birlik,narx,miqdor,jami,izoh,rasm_url,rasmlar_qoshimcha';
+  const XA_COLS='id,obyekt_id,sana,kat,subkat,mahsulot,birlik,narx,miqdor,jami,izoh,rasm_url,rasmlar_qoshimcha,umumiy_narx,tolov_turi';
   const TO_COLS='id,obyekt_id,sana,summa,turi,izoh';
   const ZA_COLS='id,obyekt_id,nomi,turi,taminotchi,umumiy,avans,sana,tayyor_sana,holat,izoh';
   const XZ_COLS='id,obyekt_id,sana,summa,izoh';
@@ -1862,6 +1885,7 @@ function subscribeRealtime(){
     .on('postgres_changes',{event:'*',schema:'public',table:'zakazlar'},(p)=>{
       if(!myCompanyEvent(p.new||p.old))return;
       applyRowEvent(DB.zakazlar,zakRow,p);scheduleRerender();
+      if(p.eventType==='INSERT')setNavBadge('zakaz');
     })
     .on('postgres_changes',{event:'*',schema:'public',table:'ustalar'},(p)=>{
       if(!myCompanyEvent(p.new||p.old))return;
@@ -1884,6 +1908,7 @@ function subscribeRealtime(){
       if(!myCompanyEvent(r||payload.old))return;
       applyRowEvent(DB.xarajatlar,xarRow,payload);scheduleRerender();
       if(payload.eventType==='INSERT'&&currentUser&&r){
+        setNavBadge('xarajatlar');
         const ob=DB.obyektlar.find(o=>o.id===r.obyekt_id);
         if(ob&&(currentUser.rol==='prorab'||ob.id===currentUser.obyektId))
           yuborBildirishnoma("Yangi xarajat qo'shildi",`${ob.nom}: ${r.mahsulot} — ${fmt(Number(r.jami))}`);
@@ -1894,6 +1919,7 @@ function subscribeRealtime(){
       if(!myCompanyEvent(r||payload.old))return;
       applyRowEvent(DB.tolovlar,tolRow,payload);scheduleRerender();
       if(payload.eventType==='INSERT'&&currentUser&&r){
+        setNavBadge('tolovlar');
         const ob=DB.obyektlar.find(o=>o.id===r.obyekt_id);
         if(ob&&(currentUser.rol==='prorab'||ob.id===currentUser.obyektId))
           yuborBildirishnoma("Yangi to'lov qayd etildi",`${ob.nom}: +${fmt(Number(r.summa))}`);
@@ -1904,8 +1930,10 @@ function subscribeRealtime(){
       if(!myCompanyEvent(r))return;
       if(currentUser&&currentChatObj)await loadChatFor(currentChatObj);
       checkUnreadChat();
-      if(currentUser&&r&&r.from_login!==currentUser.login)
+      if(currentUser&&r&&r.from_login!==currentUser.login){
+        setNavBadge('kassa'); // chat alohida tab emas — Asosiy'da bildirish beramiz
         yuborBildirishnoma(`Yangi xabar: ${esc(r.from_ism)}`,r.matn.slice(0,80));
+      }
     })
     .subscribe();
 }
@@ -2095,6 +2123,16 @@ const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth
 function validSana(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s||''))return false;const d=new Date(s+'T00:00:00');if(isNaN(d))return false;const max=new Date();max.setFullYear(max.getFullYear()+1);return d>=new Date('2020-01-01')&&d<=max;}
 // 4.3: musbat summa tekshiruvi
 function validSumma(n){n=Number(n);return isFinite(n)&&n>0&&n<1e15;}
+// Pastki menyuda "yangilik bor" qizil nuqtasi — foydalanuvchi o'sha bo'limga kirmaguncha turadi
+function setNavBadge(viewId){
+  if(activeView===viewId)return; // hozir shu bo'limda turgan bo'lsa — kerak emas
+  const dot=document.getElementById('bn-dot-'+viewId);
+  if(dot)dot.style.display='block';
+}
+function clearNavBadge(viewId){
+  const dot=document.getElementById('bn-dot-'+viewId);
+  if(dot)dot.style.display='none';
+}
 // Tarmoq/server javob bermay "osilib qolish" holatining oldini oladi —
 // belgilangan vaqtda javob kelmasa, aniq xato bilan to'xtaydi.
 function withTimeout(promise,ms,message){
@@ -2276,7 +2314,7 @@ function initApp(){
   document.getElementById('appNav').innerHTML=tabs.map(t=>`<div class="ni${t.id==='kassa'?' on':''}" data-id="${t.id}" onclick="switchView('${t.id}')">${t.l}</div>`).join('');
   document.getElementById('bottomNav').innerHTML=tabs.map(t=>`
     <div class="bn-item${t.id==='kassa'?' on':''}" data-id="${t.id}" onclick="switchView('${t.id}')">
-      <i class="ico"><svg><use href="#${iconMap[t.id]}"/></svg></i>
+      <i class="ico"><svg><use href="#${iconMap[t.id]}"/></svg><span class="bn-dot" id="bn-dot-${t.id}" style="display:none"></span></i>
       <span>${t.l}</span>
     </div>`).join('');
   const isM=currentUser.rol==='mijoz';
@@ -2470,6 +2508,7 @@ function switchView(id){
   document.querySelectorAll('.ni').forEach(n=>n.classList.toggle('on',n.dataset.id===id));
   document.querySelectorAll('.bn-item').forEach(n=>n.classList.toggle('on',n.dataset.id===id));
   document.getElementById('mainAc').style.padding=id==='chat'?'0':'16px';
+  clearNavBadge(id);
   if(id==='kassa')renderKassa();
   if(id==='xarajatlar')renderXarajatlar();
   if(id==='tolovlar')renderTolovlar();
@@ -2694,11 +2733,15 @@ function renderXarajatlar(){
   sorted.forEach(x=>{
     const ob=DB.obyektlar.find(o=>o.id===x.obyektId);
     const bc=(x.kat==='Qurilish mollari'||x.kat==='Uy qurilishi')?'bq':x.kat==='Usta haqqi'?'bu':'bb';
+    const isBoshqaYangi=x.kat==='Boshqa xarajatlar'&&x.tolovTuri;
+    const metaLine=isBoshqaYangi
+      ?(x.tolovTuri==='avans'?`${esc(x.sana)} · Avans — Kelishilgan: ${fmt(x.umumiyNarx)} · Qoldiq: ${fmt(Math.max(0,x.umumiyNarx-x.jami))}`:`${esc(x.sana)} · To'liq to'lov`)
+      :`${esc(x.sana)} · ${x.miqdor} ${esc(x.birlik)} × ${fmt(x.narx)}`;
     html+=`<div class="li">
       <div class="li-body">
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:5px"><span class="badge ${bc}">${esc(x.kat)}</span><span style="font-size:11px;color:var(--t4);align-self:center">${esc(x.subkat)}</span>${isP&&ob?`<span style="font-size:11px;color:var(--t4);align-self:center;margin-left:auto">${ob.id}</span>`:''}</div>
         <div class="li-title">${esc(x.mahsulot)}</div>
-        <div class="li-meta">${esc(x.sana)} · ${x.miqdor} ${esc(x.birlik)} × ${fmt(x.narx)}</div>
+        <div class="li-meta">${metaLine}</div>
         ${x.izoh?`<div style="font-size:11px;color:var(--t4);margin-top:2px">${esc(x.izoh)}</div>`:''}
         ${renderXarajatRasmThumbs(x)}
       </div>
@@ -3941,6 +3984,24 @@ function updateSubkat(){
   document.getElementById('fSubkat').innerHTML=list.map(s=>`<option>${esc(s)}</option>`).join('');
   fillBirlikSelect('fBirlik',k);
   toggleUstaBosqichUI(k,'fUstaBosqichWrap','fUstaBosqich','fIzoh');
+  const isBoshqa=k==='Boshqa xarajatlar';
+  document.getElementById('fMollariWrap').style.display=isBoshqa?'none':'block';
+  document.getElementById('fMollariFields').style.display=isBoshqa?'none':'block';
+  document.getElementById('fBoshqaWrap').style.display=isBoshqa?'block':'none';
+  if(isBoshqa)switchBoshqaTolovMode('toliq');
+}
+let boshqaTolovMode='toliq';
+function switchBoshqaTolovMode(mode){
+  boshqaTolovMode=mode;
+  document.getElementById('fBoshqaSegToliq').classList.toggle('on',mode==='toliq');
+  document.getElementById('fBoshqaSegAvans').classList.toggle('on',mode==='avans');
+  document.getElementById('fBoshqaToliqWrap').style.display=mode==='toliq'?'block':'none';
+  document.getElementById('fBoshqaAvansWrap').style.display=mode==='avans'?'block':'none';
+}
+function calcBoshqaQoldiq(){
+  const kelishilgan=parseFloat(document.getElementById('fBoshqaKelishilgan').value)||0;
+  const avans=parseFloat(document.getElementById('fBoshqaAvans').value)||0;
+  document.getElementById('fBoshqaQoldiq').value=fmt(money(Math.max(0,kelishilgan-avans)));
 }
 function calcJami(){const n=parseFloat(document.getElementById('fNarx').value)||0,m=parseFloat(document.getElementById('fMiqdor').value)||0;document.getElementById('fJami').value=n&&m?fmt(n*m):'';}
 function previewImg(i,tid){const p=document.getElementById(tid);if(i.files&&i.files[0]){const r=new FileReader();r.onload=e=>{p.src=e.target.result;p.style.display='block';};r.readAsDataURL(i.files[0]);}}
@@ -4037,16 +4098,40 @@ function removeRasmFromGaleriya(galleryId,firstUrlFieldId,extraFieldId,index){
   renderRasmGaleriya(galleryId,firstUrlFieldId,extraFieldId);
 }
 async function saveXarajat(){
-  const narx=parseFloat(document.getElementById('fNarx').value),miqdor=parseFloat(document.getElementById('fMiqdor').value),mahsulot=document.getElementById('fMahsulot').value.trim();
-  if(!mahsulot||!validSumma(narx)||!validSumma(miqdor)){notify("Barcha maydonlarni to'g'ri to'ldiring");return;}
+  const kat=document.getElementById('fKategoriya').value;
+  const subkat=document.getElementById('fSubkat').value;
+  const obyektId=document.getElementById('fObyekt').value;
+  const izoh=document.getElementById('fIzoh').value;
   const rasmlarQoshimcha=document.getElementById('fRasmlarQoshimcha').value||'[]';
-  const x={id:genId('XAR'),obyektId:document.getElementById('fObyekt').value,sana:today(),kat:document.getElementById('fKategoriya').value,subkat:document.getElementById('fSubkat').value,mahsulot,birlik:document.getElementById('fBirlik').value,narx,miqdor,jami:Math.round(narx*miqdor),izoh:document.getElementById('fIzoh').value,rasmUrl:document.getElementById('fRasmUrl').value||null,rasmlarQoshimcha};
+  const rasmUrl=document.getElementById('fRasmUrl').value||null;
+  let x;
+  if(kat==='Boshqa xarajatlar'){
+    let jami,umumiyNarx=null;
+    if(boshqaTolovMode==='toliq'){
+      const umumiy=money(parseFloat(document.getElementById('fBoshqaUmumiy').value));
+      if(!validSumma(umumiy)){notify("Umumiy narxni to'g'ri kiriting");return;}
+      jami=umumiy;
+    }else{
+      const kelishilgan=money(parseFloat(document.getElementById('fBoshqaKelishilgan').value));
+      const avans=money(parseFloat(document.getElementById('fBoshqaAvans').value));
+      if(!validSumma(kelishilgan)){notify("Umumiy kelishilgan narxni to'g'ri kiriting");return;}
+      if(!validSumma(avans)){notify("Berilgan avansni to'g'ri kiriting");return;}
+      if(avans>kelishilgan){notify("Avans umumiy narxdan katta bo'lishi mumkin emas");return;}
+      jami=avans;umumiyNarx=kelishilgan;
+    }
+    x={id:genId('XAR'),obyektId,sana:today(),kat,subkat,mahsulot:subkat,birlik:null,narx:null,miqdor:null,jami,izoh,rasmUrl,rasmlarQoshimcha,umumiyNarx,tolovTuri:boshqaTolovMode};
+  }else{
+    const narx=parseFloat(document.getElementById('fNarx').value),miqdor=parseFloat(document.getElementById('fMiqdor').value),mahsulot=document.getElementById('fMahsulot').value.trim();
+    if(!mahsulot||!validSumma(narx)||!validSumma(miqdor)){notify("Barcha maydonlarni to'g'ri to'ldiring");return;}
+    x={id:genId('XAR'),obyektId,sana:today(),kat,subkat,mahsulot,birlik:document.getElementById('fBirlik').value,narx,miqdor,jami:Math.round(narx*miqdor),izoh,rasmUrl,rasmlarQoshimcha,umumiyNarx:null,tolovTuri:null};
+  }
   const{error}=await sb.from('xarajatlar').insert(xarToRow(x));
   if(error){notify('Saqlashda xato');console.error(error);return;}
-  await refreshDB();closeModal('xarajat');renderXarajatlar();notify('Xarajat saqlandi: '+fmt(narx*miqdor));
-  ['fMahsulot','fNarx','fMiqdor','fJami','fIzoh','fRasmUrl'].forEach(id=>document.getElementById(id).value='');
+  await refreshDB();closeModal('xarajat');renderXarajatlar();notify('Xarajat saqlandi: '+fmt(x.jami));
+  ['fMahsulot','fNarx','fMiqdor','fJami','fIzoh','fRasmUrl','fBoshqaUmumiy','fBoshqaKelishilgan','fBoshqaAvans','fBoshqaQoldiq'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fRasmlarQoshimcha').value='[]';
   document.getElementById('fRasmGaleriya').innerHTML='';document.getElementById('imgUploadStatus').textContent='';
+  switchBoshqaTolovMode('toliq');
 }
 async function saveTolov(){
   const summa=money(parseFloat(document.getElementById('tSumma').value));
@@ -4130,15 +4215,25 @@ function updateEditSubkat(){
 }
 function calcEditJami(){const n=parseFloat(document.getElementById('eXarNarx').value)||0,m=parseFloat(document.getElementById('eXarMiqdor').value)||0;document.getElementById('eXarJami').value=n&&m?fmt(n*m):'';}
 async function saveEditXarajat(){
-  const id=document.getElementById('eXarId').value,narx=parseFloat(document.getElementById('eXarNarx').value),miqdor=parseFloat(document.getElementById('eXarMiqdor').value),mahsulot=document.getElementById('eXarMahsulot').value.trim();
-  if(!mahsulot||!narx||!miqdor){notify("Maydonlarni to'ldiring");return;}
+  const id=document.getElementById('eXarId').value;
+  const kat=document.getElementById('eXarKat').value;
+  const mahsulot=document.getElementById('eXarMahsulot').value.trim();
   const idx=DB.xarajatlar.findIndex(x=>x.id===id);if(idx===-1)return;
-  const eski=DB.xarajatlar[idx].jami;
-  const x={...DB.xarajatlar[idx],obyektId:document.getElementById('eXarObyekt').value,sana:document.getElementById('eXarSana').value,kat:document.getElementById('eXarKat').value,subkat:document.getElementById('eXarSubkat').value,mahsulot,birlik:document.getElementById('eXarBirlik').value,narx,miqdor,jami:Math.round(narx*miqdor),izoh:document.getElementById('eXarIzoh').value,rasmUrl:document.getElementById('eXarRasmUrl').value||null,rasmlarQoshimcha:document.getElementById('eXarRasmlarQoshimcha').value||'[]'};
+  const old=DB.xarajatlar[idx];
+  const eski=old.jami;
+  let x;
+  if(kat==='Boshqa xarajatlar'&&old.tolovTuri){
+    // Yangi tizim (to'liq/avans) yozuvi — narx/miqdor/mahsulot majburiy emas, mavjud summalar saqlanadi
+    x={...old,obyektId:document.getElementById('eXarObyekt').value,sana:document.getElementById('eXarSana').value,kat,subkat:document.getElementById('eXarSubkat').value,izoh:document.getElementById('eXarIzoh').value,rasmUrl:document.getElementById('eXarRasmUrl').value||null,rasmlarQoshimcha:document.getElementById('eXarRasmlarQoshimcha').value||'[]'};
+  }else{
+    const narx=parseFloat(document.getElementById('eXarNarx').value),miqdor=parseFloat(document.getElementById('eXarMiqdor').value);
+    if(!mahsulot||!narx||!miqdor){notify("Maydonlarni to'ldiring");return;}
+    x={...old,obyektId:document.getElementById('eXarObyekt').value,sana:document.getElementById('eXarSana').value,kat,subkat:document.getElementById('eXarSubkat').value,mahsulot,birlik:document.getElementById('eXarBirlik').value,narx,miqdor,jami:Math.round(narx*miqdor),izoh:document.getElementById('eXarIzoh').value,rasmUrl:document.getElementById('eXarRasmUrl').value||null,rasmlarQoshimcha:document.getElementById('eXarRasmlarQoshimcha').value||'[]'};
+  }
   const{error}=await sb.from('xarajatlar').update(xarToRow(x)).eq('id',id);
   if(error){notify('Xato');console.error(error);return;}
   closeEditModal('xarajat');await refreshDB();renderXarajatlar();
-  const f=(narx*miqdor)-eski;notify(`Yangilandi${f!==0?` (${f>0?'+':''}${fmt(f)})`:''}`)
+  const f=x.jami-eski;notify(`Yangilandi${f!==0?` (${f>0?'+':''}${fmt(f)})`:''}`)
 }
 function closeEditModal(t){document.getElementById('modalEdit'+t[0].toUpperCase()+t.slice(1)).classList.remove('on');}
 function openEditTolov(id){
