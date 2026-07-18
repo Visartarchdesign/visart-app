@@ -1964,6 +1964,45 @@ function subscribeRealtime(){
     });
 }
 function unsubscribeRealtime(){if(_rtChannel){sb.removeChannel(_rtChannel);_rtChannel=null;}}
+// ─── ZAXIRA TIZIM: Realtime ishlamay qolsa ham bildirishnoma/qizil nuqta ishlashi uchun ───
+// Har 20 soniyada jimgina ma'lumotni qayta tekshiradi va yangilik bo'lsa xabar beradi.
+let _pollTimer=null;
+function startPolling(){
+  if(_pollTimer)return;
+  _pollTimer=setInterval(async()=>{
+    if(!currentUser||currentUser.rol==='superadmin')return;
+    const prevXarIds=new Set(DB.xarajatlar.map(x=>x.id));
+    const prevTolIds=new Set(DB.tolovlar.map(t=>t.id));
+    const prevZakIds=new Set(DB.zakazlar.map(z=>z.id));
+    await refreshDB();
+    if(activeView==='kassa')renderKassa();
+    else if(activeView==='xarajatlar')renderXarajatlar();
+    else if(activeView==='tolovlar')renderTolovlar();
+    else if(activeView==='zakaz')renderZakaz();
+    const yangiXar=DB.xarajatlar.filter(x=>!prevXarIds.has(x.id));
+    const yangiTol=DB.tolovlar.filter(t=>!prevTolIds.has(t.id));
+    const yangiZak=DB.zakazlar.filter(z=>!prevZakIds.has(z.id));
+    yangiXar.forEach(r=>{
+      const ob=DB.obyektlar.find(o=>o.id===r.obyektId);
+      if(ob&&(currentUser.rol==='prorab'||ob.id===currentUser.obyektId)){
+        setNavBadge('xarajatlar');
+        yuborBildirishnoma("Yangi xarajat qo'shildi",`${ob.nom}: ${r.mahsulot} — ${fmt(r.jami)}`);
+      }
+    });
+    yangiTol.forEach(r=>{
+      const ob=DB.obyektlar.find(o=>o.id===r.obyektId);
+      if(ob&&(currentUser.rol==='prorab'||ob.id===currentUser.obyektId)){
+        setNavBadge('tolovlar');
+        yuborBildirishnoma("Yangi to'lov qayd etildi",`${ob.nom}: +${fmt(r.summa)}`);
+      }
+    });
+    yangiZak.forEach(r=>{
+      const ob=DB.obyektlar.find(o=>o.id===r.obyektId);
+      if(ob&&(currentUser.rol==='prorab'||ob.id===currentUser.obyektId))setNavBadge('zakaz');
+    });
+  },20000);
+}
+function stopPolling(){if(_pollTimer){clearInterval(_pollTimer);_pollTimer=null;}}
 function rerenderCurrentView(){
   if(activeView==='kassa')renderKassa();else if(activeView==='xarajatlar')renderXarajatlar();
   else if(activeView==='tolovlar')renderTolovlar();else if(activeView==='zakaz')renderZakaz();
@@ -2316,17 +2355,18 @@ async function startApp(){
   if(currentUser.rol==='superadmin'){initSuperadminApp();translateStatic();return;}
   await refreshDB();initApp();subscribeRealtime();translateStatic();
   if(bildirishnomaYoqilganmi())registerPushSubscription();
+  startPolling();
 }
 async function signOutAllDevices(){
   if(!await askConfirm('Barcha qurilmalarda (shu jumladan bu yerda) sessiya yopiladi va qayta kirish kerak bo\'ladi. Davom etasizmi?',{okText:'Chiqish'}))return;
   try{await sb.auth.signOut({scope:'global'});}catch(e){await sb.auth.signOut();}
-  currentUser=null;unsubscribeRealtime();
+  currentUser=null;unsubscribeRealtime();stopPolling();
   document.getElementById('mainApp').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
   revealLoginForm();
   notify('Barcha qurilmalardan chiqildi');
 }
-async function doLogout(){unsubscribeRealtime();await sb.auth.signOut();currentUser=null;document.getElementById('mainApp').style.display='none';document.getElementById('loginScreen').style.display='flex';revealLoginForm();document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';switchAuthTab('login');}
+async function doLogout(){unsubscribeRealtime();stopPolling();await sb.auth.signOut();currentUser=null;document.getElementById('mainApp').style.display='none';document.getElementById('loginScreen').style.display='flex';revealLoginForm();document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';switchAuthTab('login');}
 
 // ─── INIT ───
 function initApp(){
