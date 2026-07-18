@@ -2189,14 +2189,20 @@ function validSana(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s||''))return false;const d
 // 4.3: musbat summa tekshiruvi
 function validSumma(n){n=Number(n);return isFinite(n)&&n>0&&n<1e15;}
 // Pastki menyuda "yangilik bor" qizil nuqtasi — foydalanuvchi o'sha bo'limga kirmaguncha turadi
+let _activeBadgeCount=0;
 function setNavBadge(viewId){
-  if(activeView===viewId)return; // hozir shu bo'limda turgan bo'lsa — kerak emas
-  const dot=document.getElementById('bn-dot-'+viewId);
-  if(dot)dot.style.display='block';
+  if(activeView!==viewId){
+    const dot=document.getElementById('bn-dot-'+viewId);
+    if(dot&&dot.style.display!=='block'){dot.style.display='block';_activeBadgeCount++;}
+  }
+  // Bosh ekrandagi ilova belgisiga ham nishona qo'yamiz (qo'llab-quvvatlagan brauzerlarda)
+  if('setAppBadge' in navigator){try{navigator.setAppBadge(Math.max(1,_activeBadgeCount));}catch(e){}}
 }
 function clearNavBadge(viewId){
   const dot=document.getElementById('bn-dot-'+viewId);
-  if(dot)dot.style.display='none';
+  if(dot&&dot.style.display==='block'){dot.style.display='none';_activeBadgeCount=Math.max(0,_activeBadgeCount-1);}
+  if('clearAppBadge' in navigator&&_activeBadgeCount===0){try{navigator.clearAppBadge();}catch(e){}}
+  else if('setAppBadge' in navigator&&_activeBadgeCount>0){try{navigator.setAppBadge(_activeBadgeCount);}catch(e){}}
 }
 // Tarmoq/server javob bermay "osilib qolish" holatining oldini oladi —
 // belgilangan vaqtda javob kelmasa, aniq xato bilan to'xtaydi.
@@ -2356,6 +2362,7 @@ async function startApp(){
   await refreshDB();initApp();subscribeRealtime();translateStatic();
   if(bildirishnomaYoqilganmi())registerPushSubscription();
   startPolling();
+  if('clearAppBadge' in navigator){try{navigator.clearAppBadge();}catch(e){}}
 }
 async function signOutAllDevices(){
   if(!await askConfirm('Barcha qurilmalarda (shu jumladan bu yerda) sessiya yopiladi va qayta kirish kerak bo\'ladi. Davom etasizmi?',{okText:'Chiqish'}))return;
@@ -2677,10 +2684,10 @@ function renderKassa(){
         </div>
       </div>
       <div class="sg${ob.xizmatTuri!=='yoq'?' sg-4':''}">
-        <div class="sc"><div class="sl">To'lov</div><div class="sv sv-g">${(jT/1000000).toFixed(2)}</div><div class="su">mln soʻm</div></div>
-        <div class="sc"><div class="sl">Xarajat</div><div class="sv sv-r">${(jX/1000000).toFixed(2)}</div><div class="su">mln soʻm</div></div>
-        ${ob.xizmatTuri!=='yoq'?`<div class="sc"><div class="sl">Muallif nazorati</div><div class="sv" style="color:var(--gold-d)">${(xizOlingan/1000000).toFixed(2)}</div><div class="su">mln soʻm</div><div class="sv-sub">qoldiq: ${fmt(xizQoldiq)}</div></div>`:''}
-        <div class="sc ${q<0?'sc-r':q>0?'sc-g':''}"><div class="sl">Qoldiq</div><div class="sv ${ql}">${(Math.abs(q)/1000000).toFixed(2)}</div><div class="su">${q<0?'mavjud qarzdorlik':q>0?'qoldiq summa':'teng'}</div></div>
+        <div class="sc"><div class="sl">To'lov</div><div class="sv sv-g">${(jT/1000000).toFixed(2)}</div><div class="su">${fmt(jT)}</div></div>
+        <div class="sc"><div class="sl">Xarajat</div><div class="sv sv-r">${(jX/1000000).toFixed(2)}</div><div class="su">${fmt(jX)}</div></div>
+        ${ob.xizmatTuri!=='yoq'?`<div class="sc"><div class="sl">Muallif nazorati</div><div class="sv" style="color:var(--gold-d)">${(xizOlingan/1000000).toFixed(2)}</div><div class="su">${fmt(xizOlingan)}</div><div class="sv-sub">qoldiq: ${fmt(xizQoldiq)}</div></div>`:''}
+        <div class="sc ${q<0?'sc-r':q>0?'sc-g':''}"><div class="sl">Qoldiq</div><div class="sv ${ql}">${(Math.abs(q)/1000000).toFixed(2)}</div><div class="su">${fmt(Math.abs(q))}</div></div>
       </div>
       <div class="pg-wrap"><div class="pg-bar" style="width:${pct}%"></div></div>
       <div class="pg-lbl"><span>To'langan: ${pct}%</span><span>${qt}</span></div>
