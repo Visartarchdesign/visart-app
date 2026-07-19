@@ -2188,8 +2188,12 @@ const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth
 function validSana(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s||''))return false;const d=new Date(s+'T00:00:00');if(isNaN(d))return false;const max=new Date();max.setFullYear(max.getFullYear()+1);return d>=new Date('2020-01-01')&&d<=max;}
 // 4.3: musbat summa tekshiruvi
 function validSumma(n){n=Number(n);return isFinite(n)&&n>0&&n<1e15;}
-// Pastki menyuda "yangilik bor" qizil nuqtasi — foydalanuvchi o'sha bo'limga kirmaguncha turadi
+// Pastki menyuda "yangilik bor" qizil nuqtasi — foydalanuvchi o'sha bo'limga kirmaguncha turadi.
+// localStorage orqali saqlanadi — ilova qayta ochilganda ham "unutilib qolmaydi".
 let _activeBadgeCount=0;
+function _seenKey(viewId){return `visart_seen_${viewId}_${currentUser?currentUser.login:''}`;}
+function markSeenCount(viewId,count){try{localStorage.setItem(_seenKey(viewId),String(count));}catch(e){}}
+function getSeenCount(viewId){try{return parseInt(localStorage.getItem(_seenKey(viewId))||'0',10);}catch(e){return 0;}}
 function setNavBadge(viewId){
   if(activeView!==viewId){
     const dot=document.getElementById('bn-dot-'+viewId);
@@ -2203,6 +2207,18 @@ function clearNavBadge(viewId){
   if(dot&&dot.style.display==='block'){dot.style.display='none';_activeBadgeCount=Math.max(0,_activeBadgeCount-1);}
   if('clearAppBadge' in navigator&&_activeBadgeCount===0){try{navigator.clearAppBadge();}catch(e){}}
   else if('setAppBadge' in navigator&&_activeBadgeCount>0){try{navigator.setAppBadge(_activeBadgeCount);}catch(e){}}
+  // Shu bo'limni "ko'rilgan" deb belgilaymiz — hozirgi yozuvlar sonini saqlaymiz
+  const counts={xarajatlar:()=>DB.xarajatlar.length,tolovlar:()=>DB.tolovlar.length,zakaz:()=>DB.zakazlar.length};
+  if(counts[viewId])markSeenCount(viewId,counts[viewId]());
+}
+// Ilova (qayta) ochilganda — oldingi sessiyada ko'rilmagan yangiliklar bo'lsa, nuqtani tiklaydi
+function restoreNavBadgesFromHistory(){
+  const counts={xarajatlar:DB.xarajatlar.length,tolovlar:DB.tolovlar.length,zakaz:DB.zakazlar.length};
+  Object.keys(counts).forEach(viewId=>{
+    const seen=getSeenCount(viewId);
+    if(seen===0){markSeenCount(viewId,counts[viewId]);return;} // birinchi marta — hozirgi holatni "ko'rilgan" deb belgilaymiz
+    if(counts[viewId]>seen)setNavBadge(viewId);
+  });
 }
 // Tarmoq/server javob bermay "osilib qolish" holatining oldini oladi —
 // belgilangan vaqtda javob kelmasa, aniq xato bilan to'xtaydi.
@@ -2362,7 +2378,7 @@ async function startApp(){
   await refreshDB();initApp();subscribeRealtime();translateStatic();
   if(bildirishnomaYoqilganmi())registerPushSubscription();
   startPolling();
-  if('clearAppBadge' in navigator){try{navigator.clearAppBadge();}catch(e){}}
+  restoreNavBadgesFromHistory();
 }
 async function signOutAllDevices(){
   if(!await askConfirm('Barcha qurilmalarda (shu jumladan bu yerda) sessiya yopiladi va qayta kirish kerak bo\'ladi. Davom etasizmi?',{okText:'Chiqish'}))return;
