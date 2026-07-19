@@ -2,12 +2,13 @@
 // Maqsad: PWA sifatida "o'rnatish" imkonini berish + oddiy offline-qobiliyat.
 // Ma'lumotlar (Supabase) doim tarmoqdan olinadi — bu yerda faqat ilova "qobig'i" keshlanadi.
 
-const CACHE_NAME = 'visart-shell-v4';
+const CACHE_NAME = 'visart-shell-v7';
 const SHELL_FILES = [
   './',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './badge-96.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -44,13 +45,19 @@ self.addEventListener('push', (event) => {
   let data = { title: 'VISART', body: 'Yangilanish bor' };
   try { if (event.data) data = event.data.json(); } catch (e) {}
   event.waitUntil(
-    self.registration.showNotification(data.title || 'VISART', {
-      body: data.body || '',
-      icon: 'icon-192.png',
-      badge: 'icon-192.png',
-      tag: 'visart-push-' + Date.now(),
-      vibrate: [100, 50, 100],
-    })
+    (async () => {
+      await self.registration.showNotification(data.title || 'VISART', {
+        body: data.body || '',
+        icon: 'icon-192.png',
+        badge: 'badge-96.png', // Android holat panelida ko'rsatiladigan oq-silueta ikonka
+        tag: 'visart-push-' + Date.now(),
+        vibrate: [100, 50, 100],
+      });
+      // Ilova butunlay yopiq bo'lsa ham, bosh ekrandagi belgiga nishona qo'yamiz
+      if ('setAppBadge' in navigator) {
+        try { await navigator.setAppBadge(1); } catch (e) {}
+      }
+    })()
   );
 });
 
