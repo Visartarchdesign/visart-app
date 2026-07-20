@@ -2255,6 +2255,11 @@ async function doLogin(){
     if(rememberEl&&!rememberEl.checked)sessionStorage.setItem('visart_no_remember','1');
     else sessionStorage.removeItem('visart_no_remember');
     await startApp();
+    // Har safar yangi login qilinganda — agar hali javob berilmagan bo'lsa,
+    // brauzerning o'zi "Ruxsat berish / Bloklash" so'rovini ko'rsatadi (WhatsApp/Telegram kabi).
+    if(currentUser&&currentUser.rol!=='superadmin'&&'Notification' in window&&Notification.permission==='default'){
+      soraBildirishnomaRuxsati();
+    }
   }catch(e){console.error(e);showErr('loginError',e&&e.message?e.message:'Ulanishda xato — internetni yoki Supabase sozlamalarini tekshiring');}
   finally{if(btn){btn.disabled=false;btn.textContent='Kirish';}}
 }
