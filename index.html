@@ -1746,16 +1746,25 @@ async function registerPushSubscription(){
     if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
     if(!currentUser||currentUser.rol==='superadmin')return;
     const reg=await navigator.serviceWorker.ready;
-    let sub=await reg.pushManager.getSubscription();
-    if(!sub){
-      sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)});
+    const oldSub=await reg.pushManager.getSubscription();
+    // Har doim YANGI, hozirgi obuna yaratamiz — eski (sayt ma'lumotlari tozalangandan keyin
+    // yoki Service Worker yangilangandan keyin) obuna endi ishlamay qolgan bo'lishi mumkin.
+    let oldEndpoint=null;
+    if(oldSub){
+      oldEndpoint=oldSub.endpoint;
+      try{await oldSub.unsubscribe();}catch(e){}
     }
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)});
     const raw=sub.toJSON();
     await callManageAuth('save_push_subscription',{
       endpoint:raw.endpoint,p256dh:raw.keys.p256dh,authKey:raw.keys.auth,
       rol:currentUser.rol,login:currentUser.login,kompaniyaId:currentUser.kompaniyaId,
       obyektId:currentUser.rol==='mijoz'?currentUser.obyektId:null
     });
+    // Eski (endi noto'g'ri) yozuvni bazadan tozalaymiz, agar yangisidan farq qilsa
+    if(oldEndpoint&&oldEndpoint!==raw.endpoint){
+      callManageAuth('remove_push_subscription',{endpoint:oldEndpoint}).catch(()=>{});
+    }
   }catch(e){console.error('Push obunasi xatosi:',e);}
 }
 function bildirishnomaYoqilganmi(){
