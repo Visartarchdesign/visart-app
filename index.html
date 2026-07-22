@@ -323,8 +323,8 @@ textarea.inp{resize:vertical;min-height:80px}
 
 /* ── STATUS BADGE ── */
 .sb{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
-.sb-g{background:var(--gold-bg);color:var(--gold-d)}
-.sb-r{background:var(--b2);color:var(--t2)}
+.sb-g{background:var(--ok2);color:var(--ok-text)}
+.sb-r{background:var(--err2);color:var(--err-text)}
 .sb-y{background:var(--b2);color:var(--t3)}
 
 /* ── BACKUP ── */
@@ -1486,8 +1486,8 @@ async function callManageAuth(action,payload){
 }
 
 // Baza <-> Ilova maydon nomlarini moslashtirish (snake_case <-> camelCase)
-function obRow(r){return{id:r.id,nom:r.nom,mijozIsm:r.mijoz_ism,mijozLogin:r.mijoz_login,mijozTel:r.mijoz_tel,maydon:r.maydon,sana:r.sana,holat:r.holat,prorabLogin:r.prorab_login,smeta:Number(r.smeta)||0,xizmatTuri:r.xizmat_turi||'yoq',xizmatFoiz:Number(r.xizmat_foiz)||0,xizmatOylik:Number(r.xizmat_oylik)||0,obyektTuri:r.obyekt_turi||'ikki',tugashSana:r.tugash_sana||''};}
-function obToRow(o){return{id:o.id,nom:o.nom,mijoz_ism:o.mijozIsm,mijoz_login:o.mijozLogin,mijoz_tel:o.mijozTel,maydon:o.maydon,sana:o.sana,holat:o.holat,prorab_login:o.prorabLogin,smeta:o.smeta||0,xizmat_turi:o.xizmatTuri||'yoq',xizmat_foiz:o.xizmatFoiz||0,xizmat_oylik:o.xizmatOylik||0,obyekt_turi:o.obyektTuri||'ikki',tugash_sana:o.tugashSana||null,kompaniya_id:currentUser.kompaniyaId};}
+function obRow(r){return{id:r.id,nom:r.nom,mijozIsm:r.mijoz_ism,mijozLogin:r.mijoz_login,mijozTel:r.mijoz_tel,maydon:r.maydon,sana:r.sana,holat:r.holat,prorabLogin:r.prorab_login,smeta:Number(r.smeta)||0,xizmatTuri:r.xizmat_turi||'yoq',xizmatFoiz:Number(r.xizmat_foiz)||0,xizmatOylik:Number(r.xizmat_oylik)||0,obyektTuri:r.obyekt_turi||'ikki',tugashSana:r.tugash_sana||'',muzlatilganSanasi:r.muzlatilgan_sanasi||null,muzlatilganKunlar:Number(r.muzlatilgan_kunlar)||0};}
+function obToRow(o){return{id:o.id,nom:o.nom,mijoz_ism:o.mijozIsm,mijoz_login:o.mijozLogin,mijoz_tel:o.mijozTel,maydon:o.maydon,sana:o.sana,holat:o.holat,prorab_login:o.prorabLogin,smeta:o.smeta||0,xizmat_turi:o.xizmatTuri||'yoq',xizmat_foiz:o.xizmatFoiz||0,xizmat_oylik:o.xizmatOylik||0,obyekt_turi:o.obyektTuri||'ikki',tugash_sana:o.tugashSana||null,kompaniya_id:currentUser.kompaniyaId,muzlatilgan_sanasi:o.muzlatilganSanasi||null,muzlatilgan_kunlar:o.muzlatilganKunlar||0};}
 function xarRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,kat:r.kat,subkat:r.subkat,mahsulot:r.mahsulot,birlik:r.birlik,narx:r.narx!=null?Number(r.narx):null,miqdor:r.miqdor!=null?Number(r.miqdor):null,jami:Number(r.jami),izoh:r.izoh,rasmUrl:r.rasm_url,rasmlarQoshimcha:r.rasmlar_qoshimcha||'[]',umumiyNarx:r.umumiy_narx!=null?Number(r.umumiy_narx):null,tolovTuri:r.tolov_turi||null};}
 function xarToRow(x){return{id:x.id,obyekt_id:x.obyektId,sana:x.sana,kat:x.kat,subkat:x.subkat,mahsulot:x.mahsulot,birlik:x.birlik,narx:x.narx,miqdor:x.miqdor,jami:x.jami,izoh:x.izoh,rasm_url:x.rasmUrl||null,rasmlar_qoshimcha:x.rasmlarQoshimcha||'[]',kompaniya_id:currentUser.kompaniyaId,umumiy_narx:x.umumiyNarx!=null?x.umumiyNarx:null,tolov_turi:x.tolovTuri||null};}
 function tolRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,summa:Number(r.summa),turi:r.turi,izoh:r.izoh};}
@@ -1509,7 +1509,7 @@ async function loadDB(){
   // Mijoz faqat o'z obyektini oladi — trafik va sizib chiqishni kamaytiradi (RLS server tomonda asosiy himoya)
   const mine=currentUser&&currentUser.rol==='mijoz'?currentUser.obyektId:null;
   const f=q=>mine?q.eq('obyekt_id',mine):q;
-  const OB_COLS='id,nom,mijoz_ism,mijoz_login,mijoz_tel,maydon,sana,holat,prorab_login,smeta,xizmat_turi,xizmat_foiz,xizmat_oylik,obyekt_turi,tugash_sana';
+  const OB_COLS='id,nom,mijoz_ism,mijoz_login,mijoz_tel,maydon,sana,holat,prorab_login,smeta,xizmat_turi,xizmat_foiz,xizmat_oylik,obyekt_turi,tugash_sana,muzlatilgan_sanasi,muzlatilgan_kunlar';
   const XA_COLS='id,obyekt_id,sana,kat,subkat,mahsulot,birlik,narx,miqdor,jami,izoh,rasm_url,rasmlar_qoshimcha,umumiy_narx,tolov_turi';
   const TO_COLS='id,obyekt_id,sana,summa,turi,izoh';
   const ZA_COLS='id,obyekt_id,nomi,turi,taminotchi,umumiy,avans,sana,tayyor_sana,holat,izoh';
@@ -1967,6 +1967,26 @@ function startPolling(){
   },20000);
 }
 function stopPolling(){if(_pollTimer){clearInterval(_pollTimer);_pollTimer=null;}}
+
+// ─── Fon-yukni kamaytirish: ilova ko'zga ko'rinmay qolganda (boshqa ilovaga
+// o'tilganda, ekran o'chirilganda) so'rovlarni to'xtatamiz — bepul server
+// resurslariga ortiqcha bosim bermaslik uchun. Qayta ko'ringanda tiklanadi.
+document.addEventListener('visibilitychange',()=>{
+  if(!currentUser||currentUser.rol==='superadmin')return;
+  if(document.hidden){
+    stopPolling();
+    unsubscribeRealtime();
+  }else{
+    subscribeRealtime();
+    startPolling();
+    refreshDB().then(()=>{
+      if(activeView==='kassa')renderKassa();
+      else if(activeView==='xarajatlar')renderXarajatlar();
+      else if(activeView==='tolovlar')renderTolovlar();
+      else if(activeView==='zakaz')renderZakaz();
+    });
+  }
+});
 function rerenderCurrentView(){
   if(activeView==='kassa')renderKassa();else if(activeView==='xarajatlar')renderXarajatlar();
   else if(activeView==='tolovlar')renderTolovlar();else if(activeView==='zakaz')renderZakaz();
@@ -2664,7 +2684,7 @@ function renderKassa(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
         <div><div style="font-size:15px;font-weight:700;color:var(--t1)">${esc(ob.nom)}</div><div style="font-size:11px;color:var(--t4);margin-top:2px">${ob.id} · ${ob.sana}</div></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <span class="sb ${ob.holat==='Faol'?'sb-g':ob.holat==='Yakunlangan'?'sb-r':'sb-y'}">${ob.holat}</span>
+          <span class="sb ${ob.holat==='Faol'?'sb-g':ob.holat==='Muzlatilgan'?'sb-r':'sb-y'}">${ob.holat}</span>
           <button class="btn-e" style="padding:6px 10px;font-size:12px" onclick="exportObyektPDF('${ob.id}')"><i class="ico"><svg><use href="#ic-file-text"/></svg></i> Hisobot</button><button class="btn-e" style="padding:6px 10px;font-size:12px" onclick="exportObyektExcel('${ob.id}')"><i class="ico"><svg><use href="#ic-download"/></svg></i> Excel</button>
         </div>
       </div>
@@ -2677,32 +2697,51 @@ function renderKassa(){
       <div class="pg-wrap"><div class="pg-bar" style="width:${pct}%"></div></div>
       <div class="pg-lbl"><span>To'langan: ${pct}%</span><span>${qt}</span></div>
       <div style="margin-top:12px;padding:10px 12px;background:var(--b2);border-radius:var(--r2);font-size:12px;color:var(--t3)"><i class="ico"><svg><use href="#ic-user"/></svg></i> ${esc(ob.mijozIsm)} · boshlangan: ${esc(ob.sana)}</div>
-      ${ob.smeta>0?(()=>{
-        const sp=Math.min(100,Math.round(jX/ob.smeta*100));
-        const over=jX>ob.smeta;
-        const sc=over?'var(--err)':sp>=90?'#D97706':'var(--ok)';
-        const srokHtml=ob.tugashSana?(()=>{
-          const start=new Date(ob.sana),end=new Date(ob.tugashSana),nowD=new Date(today());
-          const totalDays=Math.max(1,Math.round((end-start)/86400000));
-          const passedDays=Math.max(0,Math.round((nowD-start)/86400000));
-          const srokPct=Math.min(100,Math.max(0,Math.round(passedDays/totalDays*100)));
-          const qolganKun=Math.round((end-nowD)/86400000);
-          const overdue=qolganKun<0;
-          const srokColor=overdue?'var(--err)':srokPct>=90?'#D97706':'var(--ok)';
-          const qolganTxt=overdue?`Muddat ${Math.abs(qolganKun)} kun oshib ketdi`:`${qolganKun} kun qoldi`;
-          return `<div class="smeta-srok">
-            <div class="smeta-srok-top"><span><i class="ico"><svg><use href="#ic-calendar"/></svg></i> Tugallanishi kutilayotgan taxminiy sana: <b>${ob.tugashSana}</b></span></div>
-            <div class="pg-wrap" style="margin-top:6px"><div class="pg-bar" style="width:${srokPct}%;background:${srokColor}"></div></div>
-            <div class="smeta-srok-bottom"><span>${srokPct}% vaqt o'tdi</span><span style="color:${srokColor};font-weight:700">${qolganTxt}</span></div>
+      ${(()=>{
+        const muzlatilgan=ob.holat==='Muzlatilgan';
+        // Muzlatilgan kunlarni hisoblaymiz: avvalgi yig'ilgan + hozir muzlatilgan bo'lsa shu daqiqagacha o'tgan kunlar
+        const jamiMuzlatilganKun=(ob.muzlatilganKunlar||0)+(muzlatilgan&&ob.muzlatilganSanasi?Math.max(0,Math.round((new Date(today())-new Date(ob.muzlatilganSanasi))/86400000)):0);
+        const frozenStyle=muzlatilgan?'opacity:.55;filter:grayscale(.4)':'';
+        const frozenTag=muzlatilgan?` <span style="color:var(--err-text);font-weight:700">· Muzlatilgan</span>`:'';
+        let banner='';
+        if(muzlatilgan){
+          banner=`<div style="margin-top:10px;padding:10px 12px;background:var(--err2);border-radius:var(--r2);font-size:12.5px;color:var(--err-text);font-weight:600;display:flex;align-items:center;gap:8px">
+            <i class="ico"><svg><use href="#ic-alert"/></svg></i> Pul mablag'i manfiyga o'tgani uchun qurilish holati muzlatildi
           </div>`;
-        })():'';
-        return `<div class="smeta-box">
-          <div class="smeta-top"><span><i class="ico"><svg><use href="#ic-target"/></svg></i> Taxminiy kutilayotgan smeta: ${fmt(ob.smeta)}</span><span style="color:${sc};font-weight:700">${sp}%${over?' — OSHIB KETDI':''}</span></div>
-          <div class="pg-wrap"><div class="pg-bar" style="width:${Math.min(100,sp)}%;background:${sc}"></div></div>
-          ${over?`<div class="smeta-over">Smeta ${fmt(jX-ob.smeta)} so'mga oshib ketdi</div>`:`<div class="smeta-left">Smetadan qoldi: ${fmt(ob.smeta-jX)}</div>`}
-          ${srokHtml}
-        </div>`;
-      })():''}
+        }
+        let smetaHtml='';
+        if(ob.smeta>0){
+          const sp=Math.min(100,Math.round(jX/ob.smeta*100));
+          const over=jX>ob.smeta;
+          const sc=over?'var(--err)':sp>=90?'#D97706':'var(--ok)';
+          let srokHtml='';
+          if(ob.tugashSana){
+            const start=new Date(ob.sana),end=new Date(ob.tugashSana),nowD=new Date(today());
+            const totalDays=Math.max(1,Math.round((end-start)/86400000));
+            // Muzlatilgan kunlar hisobga olinmaydi — muddat "to'xtab turadi"
+            const passedDaysRaw=Math.max(0,Math.round((nowD-start)/86400000));
+            const passedDays=Math.max(0,passedDaysRaw-jamiMuzlatilganKun);
+            const srokPct=Math.min(100,Math.max(0,Math.round(passedDays/totalDays*100)));
+            const qolganKun=Math.round((end-nowD)/86400000)+jamiMuzlatilganKun;
+            const overdue=qolganKun<0;
+            const srokColor=overdue?'var(--err)':srokPct>=90?'#D97706':'var(--ok)';
+            const qolganTxt=overdue?`Muddat ${Math.abs(qolganKun)} kun oshib ketdi`:`${qolganKun} kun qoldi`;
+            srokHtml=`<div class="smeta-srok">
+              <div class="smeta-srok-top"><span><i class="ico"><svg><use href="#ic-calendar"/></svg></i> Tugallanishi kutilayotgan taxminiy sana: <b>${ob.tugashSana}</b></span></div>
+              <div class="pg-wrap" style="margin-top:6px"><div class="pg-bar" style="width:${srokPct}%;background:${srokColor}"></div></div>
+              <div class="smeta-srok-bottom"><span>${srokPct}% vaqt o'tdi${frozenTag}</span><span style="color:${srokColor};font-weight:700">${qolganTxt}</span></div>
+              ${jamiMuzlatilganKun>0?`<div style="font-size:11px;color:var(--t4);margin-top:4px">Jami muzlatilgan: ${jamiMuzlatilganKun} kun (hisobga olinmaydi)</div>`:''}
+            </div>`;
+          }
+          smetaHtml=`<div class="smeta-box" style="${frozenStyle}">
+            <div class="smeta-top"><span><i class="ico"><svg><use href="#ic-target"/></svg></i> Taxminiy kutilayotgan smeta: ${fmt(ob.smeta)}</span><span style="color:${sc};font-weight:700">${sp}%${over?' — OSHIB KETDI':''}</span></div>
+            <div class="pg-wrap"><div class="pg-bar" style="width:${Math.min(100,sp)}%;background:${sc}"></div></div>
+            ${over?`<div class="smeta-over">Smeta ${fmt(jX-ob.smeta)} so'mga oshib ketdi</div>`:`<div class="smeta-left">Smetadan qoldi: ${fmt(ob.smeta-jX)}${frozenTag}</div>`}
+            ${srokHtml}
+          </div>`;
+        }
+        return smetaHtml+banner;
+      })()}
       ${zakQoldiq>0?`<div class="zk-remain" style="margin-top:12px"><span class="zk-remain-lbl"><i class="ico"><svg><use href="#ic-box"/></svg></i> Buyurtmalar bo'yicha kutilayotgan to'lov</span><span class="zk-remain-val">${fmt(zakQoldiq)}</span></div>`:''}
       ${kontQoldiq>0?`<div class="zk-remain" style="margin-top:8px"><span class="zk-remain-lbl"><i class="ico"><svg><use href="#ic-clipboard"/></svg></i> Boshqa xarajatlar bo'yicha qolgan to'lov</span><span class="zk-remain-val">${fmt(kontQoldiq)}</span></div>`:''}
       <div class="cl">
@@ -3280,7 +3319,7 @@ async function renderObyektlar(){
           ${ob.maydon?`<span class="ob-meta-item">${esc(ob.maydon)} m²</span>`:''}
         </div>
         <div class="ob-badge-row">
-          <span class="sb ${ob.holat==='Faol'?'sb-g':ob.holat==='Yakunlangan'?'sb-r':'sb-y'}">${ob.holat}</span>
+          <span class="sb ${ob.holat==='Faol'?'sb-g':ob.holat==='Muzlatilgan'?'sb-r':'sb-y'}">${ob.holat}</span>
           <span class="sb" style="background:var(--b2);color:var(--t2)">${ob.obyektTuri==='ich'?'Interyer':ob.obyektTuri==='tash'?'Eksteryer':'Interyer + Eksteryer'}</span>
         </div>
         <div class="ob-acts">
@@ -3766,7 +3805,18 @@ async function saveEditObyekt(){
     if(!res.ok){notify('Parolni yangilashda xato: '+(res.error||''));return;}
   }
   if(oldLogin)await sb.from('mijozlar').update({ism:mi,tel}).eq('login',nl);
-  const updatedOb={...DB.obyektlar[idx],nom,sana:document.getElementById('eoSana').value,maydon:document.getElementById('eoMaydon').value,mijozIsm:mi,mijozLogin:nl,mijozTel:tel,holat:document.getElementById('eoHolat').value,smeta:parseFloat(document.getElementById('eoSmeta').value)||0,xizmatTuri:document.getElementById('eoXizmatTuri').value,xizmatFoiz:parseFloat(document.getElementById('eoXizmatFoiz').value)||0,xizmatOylik:parseFloat(document.getElementById('eoXizmatOylik').value)||0,obyektTuri:document.getElementById('eoObyektTuri').value,tugashSana:document.getElementById('eoTugashSana').value||''};
+  const oldOb=DB.obyektlar[idx];
+  const newHolat=document.getElementById('eoHolat').value;
+  let muzlatilganSanasi=oldOb.muzlatilganSanasi,muzlatilganKunlar=oldOb.muzlatilganKunlar||0;
+  if(newHolat==='Muzlatilgan'&&oldOb.holat!=='Muzlatilgan'){
+    muzlatilganSanasi=today(); // endigina muzlatilmoqda — boshlanish sanasini belgilaymiz
+  }else if(newHolat!=='Muzlatilgan'&&oldOb.holat==='Muzlatilgan'&&muzlatilganSanasi){
+    // muzlatishdan chiqarilmoqda — o'tgan kunlarni umumiy "muzlatilgan kunlar"ga qo'shamiz
+    const kunlar=Math.max(0,Math.round((new Date(today())-new Date(muzlatilganSanasi))/86400000));
+    muzlatilganKunlar+=kunlar;
+    muzlatilganSanasi=null;
+  }
+  const updatedOb={...oldOb,nom,sana:document.getElementById('eoSana').value,maydon:document.getElementById('eoMaydon').value,mijozIsm:mi,mijozLogin:nl,mijozTel:tel,holat:newHolat,smeta:parseFloat(document.getElementById('eoSmeta').value)||0,xizmatTuri:document.getElementById('eoXizmatTuri').value,xizmatFoiz:parseFloat(document.getElementById('eoXizmatFoiz').value)||0,xizmatOylik:parseFloat(document.getElementById('eoXizmatOylik').value)||0,obyektTuri:document.getElementById('eoObyektTuri').value,tugashSana:document.getElementById('eoTugashSana').value||'',muzlatilganSanasi,muzlatilganKunlar};
   const{error}=await sb.from('obyektlar').update(obToRow(updatedOb)).eq('id',id);
   if(error){notify('Saqlashda xato');console.error(error);return;}
   await refreshDB();document.getElementById('modalEditObyekt').classList.remove('on');renderObyektlar();notify("Obyekt yangilandi");
