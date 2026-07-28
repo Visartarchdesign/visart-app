@@ -1397,6 +1397,8 @@ const SUBKATS_META={
     {n:'Eshiklar',t:'ikki'},
     {n:'Pol',t:'ich'},
     {n:'Ship',t:'ich'},
+    {n:'Demontaj va montaj ishlari',t:'ich'},
+    {n:'Demontaj',t:'tash'},
     {n:'Hovli-landshaft',t:'tash'},
     {n:'Boshqa mol',t:'ikki'}
   ],
@@ -1520,14 +1522,14 @@ async function loadDB(){
   const KT_COLS='id,kontragent_id,obyekt_id,sana,summa,turi,izoh';
   const [ob,xa,to,za,xz,us,ut,ko,kt]=await Promise.all([
     mine?sb.from('obyektlar').select(OB_COLS).eq('id',mine):sb.from('obyektlar').select(OB_COLS),
-    f(sb.from('xarajatlar').select(XA_COLS).order('sana',{ascending:false}).limit(2000)),
-    f(sb.from('tolovlar').select(TO_COLS).order('sana',{ascending:false}).limit(2000)),
+    f(sb.from('xarajatlar').select(XA_COLS).order('sana',{ascending:false}).order('id',{ascending:false}).limit(2000)),
+    f(sb.from('tolovlar').select(TO_COLS).order('sana',{ascending:false}).order('id',{ascending:false}).limit(2000)),
     f(sb.from('zakazlar').select(ZA_COLS).limit(1000)),
     f(sb.from('xizmat_tolovlar').select(XZ_COLS).limit(1000)),
     f(sb.from('ustalar').select(US_COLS).limit(1000)),
-    f(sb.from('usta_tolovlari').select(UT_COLS).order('sana',{ascending:false}).limit(2000)),
+    f(sb.from('usta_tolovlari').select(UT_COLS).order('sana',{ascending:false}).order('id',{ascending:false}).limit(2000)),
     f(sb.from('kontragentlar').select(KO_COLS).limit(1000)),
-    f(sb.from('kontragent_tolovlari').select(KT_COLS).order('sana',{ascending:false}).limit(2000))
+    f(sb.from('kontragent_tolovlari').select(KT_COLS).order('sana',{ascending:false}).order('id',{ascending:false}).limit(2000))
   ]);
   if(ob.error||xa.error||to.error||za.error){notify('Bazadan yuklashda xato — internetni yoki Supabase sozlamalarini tekshiring');console.error(ob.error||xa.error||to.error||za.error);return{obyektlar:[],xarajatlar:[],tolovlar:[],zakazlar:[],xizmatTolovlar:[],ustalar:[],ustaTolovlari:[],kontragentlar:[],kontragentTolovlari:[]};}
   return{obyektlar:(ob.data||[]).map(obRow),xarajatlar:(xa.data||[]).map(xarRow),tolovlar:(to.data||[]).map(tolRow),zakazlar:(za.data||[]).map(zakRow),xizmatTolovlar:xz.error?[]:(xz.data||[]).map(xizRow),ustalar:us.error?[]:(us.data||[]).map(ustaRow),ustaTolovlari:ut.error?[]:(ut.data||[]).map(ustaTolRow),kontragentlar:ko.error?[]:(ko.data||[]).map(kontRow),kontragentTolovlari:kt.error?[]:(kt.data||[]).map(kontTolRow)};
@@ -1917,7 +1919,9 @@ function subscribeRealtime(){
 }
 function unsubscribeRealtime(){if(_rtChannel){sb.removeChannel(_rtChannel);_rtChannel=null;}}
 // ─── ZAXIRA TIZIM: Realtime ishlamay qolsa ham bildirishnoma/qizil nuqta ishlashi uchun ───
-// Har 20 soniyada jimgina ma'lumotni qayta tekshiradi va yangilik bo'lsa xabar beradi.
+// Har 60 soniyada jimgina ma'lumotni qayta tekshiradi va yangilik bo'lsa xabar beradi.
+// (Real vaqt ulanishi asosiy vosita — bu faqat zaxira, shuning uchun kamdan-kam ishlaydi,
+// bepul server resurslariga ortiqcha bosim bermaslik uchun.)
 let _pollTimer=null;
 function startPolling(){
   if(_pollTimer)return;
@@ -1964,7 +1968,7 @@ function startPolling(){
         yuborBildirishnoma("Muallif nazorati uchun avans qayd etildi",`${ob.nom}: +${fmt(r.summa)}`);
       }
     });
-  },20000);
+  },60000);
 }
 function stopPolling(){if(_pollTimer){clearInterval(_pollTimer);_pollTimer=null;}}
 
@@ -2764,7 +2768,7 @@ function renderKassa(){
         ${xizQoldiq>0?`<div class="zk-remain"><span class="zk-remain-lbl">Qoldiq</span><span class="zk-remain-val">${fmt(xizQoldiq)}</span></div>`:xizQoldiq<0?`<div class="zk-remain"><span class="zk-remain-lbl" style="color:var(--err)">Ortiqcha olingan</span><span class="zk-remain-val" style="color:var(--err)">${fmt(Math.abs(xizQoldiq))}</span></div>`:`<div class="zk-done">To'liq olingan</div>`}
         ${currentUser.rol==='prorab'?`<button class="btn-e" style="width:100%;margin-top:10px;padding:8px" onclick="openXizmatAvans('${ob.id}')">+ Avans oldim</button>`:''}
         ${xizList.length?`<div class="ci ci-click" onclick="toggleKassaDetail('${ob.id}-xiztarix')" style="margin-top:8px"><div class="cn">Tarix (${xizList.length})</div><div class="ca"><span class="ci-arrow" id="ka-${ob.id}-xiztarix">▾</span></div></div>
-        <div class="ci-detail" id="kd-${ob.id}-xiztarix" style="display:none">${xizList.slice().sort((a,b)=>b.sana.localeCompare(a.sana)).map(z=>`<div class="ci-sub"><span>${esc(z.sana)}${z.izoh?' · '+esc(z.izoh):''}</span><span style="display:flex;align-items:center;gap:8px">${fmt(z.summa)} ${currentUser.rol==='prorab'?`<span onclick="deleteXizmatAvans('${z.id}')" style="cursor:pointer;color:var(--err)"><i class="ico"><svg><use href="#ic-trash"/></svg></i></span>`:''}</span></div>`).join('')}</div>`:''}
+        <div class="ci-detail" id="kd-${ob.id}-xiztarix" style="display:none">${xizList.slice().sort((a,b)=>b.sana.localeCompare(a.sana)||(b.id||'').localeCompare(a.id||'')).map(z=>`<div class="ci-sub"><span>${esc(z.sana)}${z.izoh?' · '+esc(z.izoh):''}</span><span style="display:flex;align-items:center;gap:8px">${fmt(z.summa)} ${currentUser.rol==='prorab'?`<span onclick="deleteXizmatAvans('${z.id}')" style="cursor:pointer;color:var(--err)"><i class="ico"><svg><use href="#ic-trash"/></svg></i></span>`:''}</span></div>`).join('')}</div>`:''}
       </div>`:''}
     </div>`;
   });
@@ -2825,7 +2829,7 @@ function renderXarajatlar(){
       :('<div class="empty"><div class="empty-ic"><i class="ico"><svg><use href="#ic-clipboard"/></svg></i></div><div class="empty-t">Xarajatlar yo\'q</div>'+(isP?'<button class="btn-add" style="margin-top:14px" onclick="openModal(\'xarajat\')">+ Birinchi xarajatni qo\'shish</button>':'')+'</div>');
     return;
   }
-  const sorted=list.slice().sort((a,b)=>b.sana.localeCompare(a.sana));
+  const sorted=list.slice().sort((a,b)=>b.sana.localeCompare(a.sana)||(b.id||'').localeCompare(a.id||''));
   const total=sorted.reduce((s,x)=>s+x.jami,0);
   let html=`<div class="list-top"><span class="lt-ct">${sorted.length} ta yozuv</span><span class="lt-amt" style="color:var(--t1)">${fmt(total)}</span></div>`;
   sorted.forEach(x=>{
@@ -2894,7 +2898,7 @@ function renderTolovlar(){
       :('<div class="empty"><div class="empty-ic"><i class="ico"><svg><use href="#ic-card"/></svg></i></div><div class="empty-t">To\'lovlar yo\'q</div>'+(isP?'<button class="btn-add" style="margin-top:14px" onclick="openModal(\'tolov\')">+ Birinchi to\'lovni qo\'shish</button>':'')+'</div>');
     return;
   }
-  const sorted=list.slice().sort((a,b)=>b.sana.localeCompare(a.sana));
+  const sorted=list.slice().sort((a,b)=>b.sana.localeCompare(a.sana)||(b.id||'').localeCompare(a.id||''));
   const total=sorted.reduce((s,t)=>s+t.summa,0);
   let html=`<div class="list-top"><span class="lt-ct">${sorted.length} ta to'lov</span><span class="lt-amt" style="color:var(--gold-d)">${fmt(total)}</span></div>`;
   sorted.forEach(t=>{
@@ -2922,7 +2926,7 @@ function renderZakaz(){
   const icons={'Eshik':'<i class="ico"><svg><use href="#ic-door"/></svg></i>','Deraza':'<i class="ico"><svg><use href="#ic-window"/></svg></i>','Mebel':'<i class="ico"><svg><use href="#ic-sofa"/></svg></i>','Metall konstruksiya':'<i class="ico"><svg><use href="#ic-bolt"/></svg></i>','Boshqa':'<i class="ico"><svg><use href="#ic-box"/></svg></i>'};
   const holatColor={'Buyurtma qilindi':'sb-y','Tayyorlanmoqda':'sb-y','Yetkazildi':'sb-g','Ornatildi':'sb-g'};
   const tugallangan=['Yetkazildi','Ornatildi'];
-  let html=list.slice().sort((a,b)=>b.sana.localeCompare(a.sana)).map(z=>{
+  let html=list.slice().sort((a,b)=>b.sana.localeCompare(a.sana)||(b.id||'').localeCompare(a.id||'')).map(z=>{
     const ob=DB.obyektlar.find(o=>o.id===z.obyektId);
     const qoldiq=z.umumiy-z.avans;
     const pct=z.umumiy>0?Math.min(100,Math.round(z.avans/z.umumiy*100)):0;
@@ -3196,7 +3200,7 @@ function renderUstalar(){
   }
   el.innerHTML=list.slice().sort((a,b)=>(b.boshlanishSana||'').localeCompare(a.boshlanishSana||'')).map(u=>{
     const ob=DB.obyektlar.find(o=>o.id===u.obyektId);
-    const tolovlar=ustaTolovlariFor(u.id).slice().sort((a,b)=>b.sana.localeCompare(a.sana));
+    const tolovlar=ustaTolovlariFor(u.id).slice().sort((a,b)=>b.sana.localeCompare(a.sana)||(b.id||'').localeCompare(a.id||''));
     const tolangan=tolovlar.reduce((s,t)=>s+t.summa,0);
     const belgilanmagan=!u.kelishilganSumma||u.kelishilganSumma<=0;
     const qoldiq=belgilanmagan?0:Math.max(0,u.kelishilganSumma-tolangan);
