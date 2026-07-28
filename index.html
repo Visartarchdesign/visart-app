@@ -866,6 +866,12 @@ textarea.inp{resize:vertical;min-height:80px}
       <div class="card" style="padding:0 16px"><div id="foydalanuvchilarList"></div></div>
     </div>
 
+    <!-- SUPERADMIN: STATISTIKA -->
+    <div class="view" id="viewStatistika">
+      <div class="ph"><div><div class="ph-t">Statistika</div><div class="ph-s">Kirish faolligi — so'nggi 30 kun</div></div></div>
+      <div id="statistikaList"></div>
+    </div>
+
     <div class="app-footer">VISART — Arxitektura dizayn xizmatlari &nbsp;·&nbsp; +998 97 402 15 15 &nbsp;·&nbsp; visartdesign.uz<br><span style="opacity:.6">v<span id="appVersionSpan"></span></span></div>
   </main>
   <nav class="bottom-nav" id="bottomNav"></nav>
@@ -2417,8 +2423,8 @@ function initSuperadminApp(){
   document.getElementById('headerName').textContent=currentUser.ism;
   document.getElementById('headerRole').textContent='Superadmin';
   const chatBell=document.querySelector('.chat-bell');if(chatBell)chatBell.style.display='none';
-  const tabs=[{id:'kompaniyalar',l:'Kompaniyalar'},{id:'foydalanuvchilar',l:'Foydalanuvchilar'}];
-  const iconMap={kompaniyalar:'ic-building',foydalanuvchilar:'ic-user'};
+  const tabs=[{id:'kompaniyalar',l:'Kompaniyalar'},{id:'foydalanuvchilar',l:'Foydalanuvchilar'},{id:'statistika',l:'Statistika'}];
+  const iconMap={kompaniyalar:'ic-building',foydalanuvchilar:'ic-user',statistika:'ic-chart'};
   document.getElementById('appNav').innerHTML=tabs.map(t=>`<div class="ni${t.id==='kompaniyalar'?' on':''}" data-id="${t.id}" onclick="switchView('${t.id}')">${t.l}</div>`).join('');
   document.getElementById('bottomNav').innerHTML=tabs.map(t=>`
     <div class="bn-item${t.id==='kompaniyalar'?' on':''}" data-id="${t.id}" onclick="switchView('${t.id}')">
@@ -2584,6 +2590,44 @@ async function deleteSuperadminUser(){
   renderSuperadminFoydalanuvchilar();
 }
 
+async function renderSuperadminStatistika(){
+  const el=document.getElementById('statistikaList');
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--t2)">Yuklanmoqda...</div>';
+  const res=await callManageAuth('superadmin_get_login_stats',{});
+  if(!res.ok){el.innerHTML=`<div class="info-box">Xato: ${esc(res.error||'')}</div>`;return;}
+  const d=res.data;
+  const kompHtml=d.kompaniyalarBoyicha.length
+    ? d.kompaniyalarBoyicha.map(k=>`<div class="ci-sub-zak"><div class="ci-sub-zak-n">${esc(k.nomi)}</div><div class="ci-sub-zak-row"><span style="font-weight:700">${k.soni} marta</span></div></div>`).join('')
+    : '<div class="ci-empty">So\'nggi 7 kunda faollik yo\'q</div>';
+  const faollikHtml=d.songiFaollik.length
+    ? d.songiFaollik.map(f=>{
+        const vaqt=new Date(f.vaqt);
+        const vaqtStr=vaqt.toLocaleString('uz-UZ',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+        return `<div class="ci-sub-zak">
+          <div class="ci-sub-zak-n">${esc(f.ism)} <span style="color:var(--t4)">(${f.rol==='prorab'?'Prorab':f.rol==='mijoz'?'Mijoz':'-'} · ${esc(f.kompaniyaNomi)})</span></div>
+          <div class="ci-sub-zak-row"><span style="color:var(--t3)">${vaqtStr}</span><span style="color:${f.muvaffaqiyatli?'var(--ok-text)':'var(--err-text)'};font-weight:700">${f.muvaffaqiyatli?'✓ Muvaffaqiyatli':'✗ Xato parol'}</span></div>
+        </div>`;
+      }).join('')
+    : '<div class="ci-empty">Hali kirish urinishlari yo\'q</div>';
+
+  el.innerHTML=`
+    <div class="sg" style="grid-template-columns:repeat(2,1fr)">
+      <div class="sc"><div class="sl">Bugun</div><div class="sv sv-g">${d.bugunJami}</div><div class="su">${d.bugunMuvaffaqiyatli} muvaffaqiyatli, ${d.bugunMuvaffaqiyatsiz} xato</div></div>
+      <div class="sc"><div class="sl">Shu hafta</div><div class="sv">${d.haftaJami}</div><div class="su">jami kirish</div></div>
+      <div class="sc"><div class="sl">Shu oy</div><div class="sv">${d.oyJami}</div><div class="su">jami kirish</div></div>
+      <div class="sc"><div class="sl">Faol foydalanuvchi</div><div class="sv sv-g">${d.faolFoydalanuvchilar}</div><div class="su">so'nggi 7 kunda</div></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="cn" style="margin-bottom:10px;font-weight:700">Kompaniyalar bo'yicha faollik (7 kun)</div>
+      ${kompHtml}
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="cn" style="margin-bottom:10px;font-weight:700">So'nggi faollik (oxirgi 50 ta)</div>
+      ${faollikHtml}
+    </div>
+  `;
+}
+
 function switchView(id){
   activeView=id;
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
@@ -2602,6 +2646,7 @@ function switchView(id){
   if(id==='chat')initChat();
   if(id==='kompaniyalar')renderSuperadminKompaniyalar();
   if(id==='foydalanuvchilar')renderSuperadminFoydalanuvchilar();
+  if(id==='statistika')renderSuperadminStatistika();
   setTimeout(translateStatic,50); // dinamik render matnlarini ham tarjima qilish
 }
 
