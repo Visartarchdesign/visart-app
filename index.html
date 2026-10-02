@@ -699,6 +699,7 @@ textarea.inp{resize:vertical;min-height:80px}
       <div id="xarajatlarListWrap">
         <div class="ro-bar" id="xarajatReadonly" style="display:none"></div>
         <div class="filter-bar">
+          <select class="inp fsel" id="xfObyekt" onchange="applyXarFilter()" style="flex:1 1 100%;font-weight:600"></select>
           <input class="inp fsel" type="search" id="xfSearch" placeholder="Qidirish: mahsulot, izoh..." oninput="applyXarFilter()" style="flex:1 1 100%" aria-label="Xarajatlarni qidirish">
           <select class="inp fsel" id="xfKat" onchange="updateXarFilterSubkat();applyXarFilter()">
             <option value="">Barcha kategoriya</option>
@@ -716,6 +717,10 @@ textarea.inp{resize:vertical;min-height:80px}
           <div class="ph-s" style="margin-top:0">Usta bilan kelishuv, avans va hisob-kitoblar</div>
           <button class="btn-add" id="btnAddUsta" onclick="openUstaModal()">+ Yangi usta</button>
         </div>
+        <div class="filter-bar">
+          <select class="inp fsel" id="ufObyekt" onchange="applyUstaFilter()" style="flex:1 1 100%;font-weight:600"></select>
+          <button class="btn-e fclear" onclick="clearUstaFilter()"><i class="ico"><svg><use href="#ic-close"/></svg></i> Tozalash</button>
+        </div>
         <div id="ustaList"></div>
       </div>
     </div>
@@ -728,6 +733,7 @@ textarea.inp{resize:vertical;min-height:80px}
       </div>
       <div class="ro-bar" id="tolovReadonly" style="display:none"></div>
       <div class="filter-bar">
+        <select class="inp fsel" id="tfObyekt" onchange="applyTolFilter()" style="flex:1 1 100%;font-weight:600"></select>
         <input class="inp fsel" type="search" id="tfSearch" placeholder="Qidirish: izoh..." oninput="applyTolFilter()" style="flex:1 1 100%" aria-label="To'lovlarni qidirish">
         <select class="inp fsel" id="tfTuri" onchange="applyTolFilter()">
           <option value="">Barcha turi</option>
@@ -747,6 +753,10 @@ textarea.inp{resize:vertical;min-height:80px}
         <button class="btn-add" id="btnAddZakaz" onclick="openModal('zakaz')">+ Qo'shish</button>
       </div>
       <div class="ro-bar" id="zakazReadonly" style="display:none"></div>
+      <div class="filter-bar">
+        <select class="inp fsel" id="zfObyekt" onchange="applyZakFilter()" style="flex:1 1 100%;font-weight:600"></select>
+        <button class="btn-e fclear" onclick="clearZakFilter()"><i class="ico"><svg><use href="#ic-close"/></svg></i> Tozalash</button>
+      </div>
       <div id="zakazList"></div>
     </div>
 
@@ -2832,21 +2842,29 @@ function renderKassa(){
 }
 
 // ─── XARAJATLAR ───
-let xarFilter={kat:'',subkat:'',from:'',to:'',q:''};
+let xarFilter={kat:'',subkat:'',from:'',to:'',q:'',obyekt:''};
+// Obyekt filtri select'ini prorabning obyektlari bilan to'ldiradi (joriy tanlovni saqlab qolgan holda)
+function fillObyektFilter(selectId){
+  const sel=document.getElementById(selectId);if(!sel)return;
+  const val=sel.value;
+  const obs=getObs();
+  sel.innerHTML='<option value="">Barcha obyektlar</option>'+obs.map(o=>`<option value="${o.id}">${esc(o.nom)}</option>`).join('');
+  if(obs.some(o=>o.id===val))sel.value=val;
+}
 function updateXarFilterSubkat(){
   const k=document.getElementById('xfKat').value;
   const sel=document.getElementById('xfSubkat');
   sel.innerHTML='<option value="">Barcha bo\'lim</option>'+(k?SUBKATS[k].map(s=>`<option>${esc(s)}</option>`).join(''):'');
 }
 function applyXarFilter(){
-  xarFilter={kat:document.getElementById('xfKat').value,subkat:document.getElementById('xfSubkat').value,from:document.getElementById('xfSanaDan').value,to:document.getElementById('xfSanaGacha').value,q:(document.getElementById('xfSearch').value||'').trim().toLowerCase()};
+  xarFilter={kat:document.getElementById('xfKat').value,subkat:document.getElementById('xfSubkat').value,from:document.getElementById('xfSanaDan').value,to:document.getElementById('xfSanaGacha').value,q:(document.getElementById('xfSearch').value||'').trim().toLowerCase(),obyekt:document.getElementById('xfObyekt').value};
   renderXarajatlar();
 }
 function clearXarFilter(){
   document.getElementById('xfKat').value='';updateXarFilterSubkat();
   document.getElementById('xfSanaDan').value='';document.getElementById('xfSanaGacha').value='';
-  document.getElementById('xfSearch').value='';
-  xarFilter={kat:'',subkat:'',from:'',to:'',q:''};
+  document.getElementById('xfSearch').value='';document.getElementById('xfObyekt').value='';
+  xarFilter={kat:'',subkat:'',from:'',to:'',q:'',obyekt:''};
   renderXarajatlar();
 }
 let xarajatlarTab='list';
@@ -2860,7 +2878,9 @@ function switchXarajatlarTab(tab){
   if(tab==='ustalar')renderUstalar();
 }
 function renderXarajatlar(){
+  fillObyektFilter('xfObyekt');
   let list=getXar();
+  if(xarFilter.obyekt)list=list.filter(x=>x.obyektId===xarFilter.obyekt);
   if(xarFilter.kat)list=list.filter(x=>x.kat===xarFilter.kat);
   if(xarFilter.subkat)list=list.filter(x=>x.subkat===xarFilter.subkat);
   if(xarFilter.from)list=list.filter(x=>x.sana>=xarFilter.from);
@@ -2868,7 +2888,7 @@ function renderXarajatlar(){
   if(xarFilter.q)list=list.filter(x=>(x.mahsulot||'').toLowerCase().includes(xarFilter.q)||(x.izoh||'').toLowerCase().includes(xarFilter.q)||(x.subkat||'').toLowerCase().includes(xarFilter.q));
   const isP=currentUser.rol==='prorab';
   if(!list.length){
-    const hasFilter=xarFilter.kat||xarFilter.subkat||xarFilter.from||xarFilter.to||xarFilter.q;
+    const hasFilter=xarFilter.kat||xarFilter.subkat||xarFilter.from||xarFilter.to||xarFilter.q||xarFilter.obyekt;
     document.getElementById('xarajatlarTable').innerHTML=hasFilter
       ?'<div class="empty"><div class="empty-ic"><i class="ico"><svg><use href="#ic-clipboard"/></svg></i></div><div class="empty-t">Hech narsa topilmadi</div><div class="empty-s">Filtrni tozalab qayta urinib ko\'ring</div></div>'
       :('<div class="empty"><div class="empty-ic"><i class="ico"><svg><use href="#ic-clipboard"/></svg></i></div><div class="empty-t">Xarajatlar yo\'q</div>'+(isP?'<button class="btn-add" style="margin-top:14px" onclick="openModal(\'xarajat\')">+ Birinchi xarajatni qo\'shish</button>':'')+'</div>');
@@ -2886,7 +2906,7 @@ function renderXarajatlar(){
       :`${esc(x.sana)} · ${x.miqdor} ${esc(x.birlik)} × ${fmt(x.narx)}`;
     html+=`<div class="li">
       <div class="li-body">
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:5px"><span class="badge ${bc}">${esc(x.kat)}</span><span style="font-size:11px;color:var(--t4);align-self:center">${esc(x.subkat)}</span>${isP&&ob?`<span style="font-size:11px;color:var(--t4);align-self:center;margin-left:auto">${ob.id}</span>`:''}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:5px"><span class="badge ${bc}">${esc(x.kat)}</span><span style="font-size:11px;color:var(--t4);align-self:center">${esc(x.subkat)}</span>${isP&&ob?`<span style="font-size:11px;color:var(--gold-d);font-weight:700;align-self:center;margin-left:auto"><i class="ico" style="width:12px;height:12px;vertical-align:-1px"><svg><use href="#ic-building"/></svg></i> ${esc(ob.nom)}</span>`:''}</div>
         <div class="li-title">${esc(x.mahsulot)}</div>
         <div class="li-meta">${metaLine}</div>
         ${x.izoh?`<div style="font-size:11px;color:var(--t4);margin-top:2px">${esc(x.izoh)}</div>`:''}
@@ -2918,26 +2938,28 @@ function renderXarajatRasmThumbs(x){
 }
 
 // ─── TO'LOVLAR ───
-let tolFilter={turi:'',from:'',to:'',q:''};
+let tolFilter={turi:'',from:'',to:'',q:'',obyekt:''};
 function applyTolFilter(){
-  tolFilter={turi:document.getElementById('tfTuri').value,from:document.getElementById('tfSanaDan').value,to:document.getElementById('tfSanaGacha').value,q:(document.getElementById('tfSearch').value||'').trim().toLowerCase()};
+  tolFilter={turi:document.getElementById('tfTuri').value,from:document.getElementById('tfSanaDan').value,to:document.getElementById('tfSanaGacha').value,q:(document.getElementById('tfSearch').value||'').trim().toLowerCase(),obyekt:document.getElementById('tfObyekt').value};
   renderTolovlar();
 }
 function clearTolFilter(){
   document.getElementById('tfTuri').value='';document.getElementById('tfSanaDan').value='';document.getElementById('tfSanaGacha').value='';
-  document.getElementById('tfSearch').value='';
-  tolFilter={turi:'',from:'',to:'',q:''};
+  document.getElementById('tfSearch').value='';document.getElementById('tfObyekt').value='';
+  tolFilter={turi:'',from:'',to:'',q:'',obyekt:''};
   renderTolovlar();
 }
 function renderTolovlar(){
+  fillObyektFilter('tfObyekt');
   let list=getTol();
+  if(tolFilter.obyekt)list=list.filter(t=>t.obyektId===tolFilter.obyekt);
   if(tolFilter.turi)list=list.filter(t=>t.turi===tolFilter.turi);
   if(tolFilter.from)list=list.filter(t=>t.sana>=tolFilter.from);
   if(tolFilter.to)list=list.filter(t=>t.sana<=tolFilter.to);
   if(tolFilter.q)list=list.filter(t=>(t.izoh||'').toLowerCase().includes(tolFilter.q)||(t.turi||'').toLowerCase().includes(tolFilter.q));
   const isP=currentUser.rol==='prorab';
   if(!list.length){
-    const hasFilter=tolFilter.turi||tolFilter.from||tolFilter.to||tolFilter.q;
+    const hasFilter=tolFilter.turi||tolFilter.from||tolFilter.to||tolFilter.q||tolFilter.obyekt;
     document.getElementById('tolovlarTable').innerHTML=hasFilter
       ?'<div class="empty"><div class="empty-ic"><i class="ico"><svg><use href="#ic-card"/></svg></i></div><div class="empty-t">Hech narsa topilmadi</div><div class="empty-s">Filtrni tozalab qayta urinib ko\'ring</div></div>'
       :('<div class="empty"><div class="empty-ic"><i class="ico"><svg><use href="#ic-card"/></svg></i></div><div class="empty-t">To\'lovlar yo\'q</div>'+(isP?'<button class="btn-add" style="margin-top:14px" onclick="openModal(\'tolov\')">+ Birinchi to\'lovni qo\'shish</button>':'')+'</div>');
@@ -2965,9 +2987,20 @@ async function deleteTolov(id){
 }
 
 // ─── ZAKAZ (BUYURTMALAR) ───
+let zakFilter={obyekt:''};
+function applyZakFilter(){zakFilter={obyekt:document.getElementById('zfObyekt').value};renderZakaz();}
+function clearZakFilter(){document.getElementById('zfObyekt').value='';zakFilter={obyekt:''};renderZakaz();}
 function renderZakaz(){
-  const list=getZak(),isP=currentUser.rol==='prorab';
-  if(!list.length){document.getElementById('zakazList').innerHTML='<div class="empty"><div class="empty-ic"><i class="ico"><svg><use href="#ic-box"/></svg></i></div><div class="empty-t">Buyurtmalar yo\'q</div></div>';return;}
+  fillObyektFilter('zfObyekt');
+  let list=getZak();
+  if(zakFilter.obyekt)list=list.filter(z=>z.obyektId===zakFilter.obyekt);
+  const isP=currentUser.rol==='prorab';
+  if(!list.length){
+    document.getElementById('zakazList').innerHTML=zakFilter.obyekt
+      ?'<div class="empty"><div class="empty-ic"><i class="ico"><svg><use href="#ic-box"/></svg></i></div><div class="empty-t">Bu obyektda buyurtma yo\'q</div></div>'
+      :'<div class="empty"><div class="empty-ic"><i class="ico"><svg><use href="#ic-box"/></svg></i></div><div class="empty-t">Buyurtmalar yo\'q</div></div>';
+    return;
+  }
   const icons={'Eshik':'<i class="ico"><svg><use href="#ic-door"/></svg></i>','Deraza':'<i class="ico"><svg><use href="#ic-window"/></svg></i>','Mebel':'<i class="ico"><svg><use href="#ic-sofa"/></svg></i>','Metall konstruksiya':'<i class="ico"><svg><use href="#ic-bolt"/></svg></i>','Boshqa':'<i class="ico"><svg><use href="#ic-box"/></svg></i>'};
   const holatColor={'Buyurtma qilindi':'sb-y','Tayyorlanmoqda':'sb-y','Yetkazildi':'sb-g','Ornatildi':'sb-g'};
   const tugallangan=['Yetkazildi','Ornatildi'];
@@ -2982,7 +3015,8 @@ function renderZakaz(){
         <div class="zk-icon">${icons[z.turi]||'<i class="ico"><svg><use href="#ic-box"/></svg></i>'}</div>
         <div style="flex:1;min-width:0">
           <div class="zk-title">${esc(z.nomi)}</div>
-          <div class="zk-sub">${esc(z.turi)}${z.taminotchi?' · '+esc(z.taminotchi):''}${isP&&ob?' · '+esc(ob.id):''}</div>
+          <div class="zk-sub">${esc(z.turi)}${z.taminotchi?' · '+esc(z.taminotchi):''}</div>
+          ${isP&&ob?`<div style="font-size:11px;color:var(--gold-d);font-weight:700;margin-top:2px"><i class="ico" style="width:12px;height:12px;vertical-align:-1px"><svg><use href="#ic-building"/></svg></i> ${esc(ob.nom)}</div>`:''}
         </div>
         <span class="sb ${holatColor[z.holat]||'sb-y'}">${z.holat}</span>
       </div>
@@ -3234,10 +3268,17 @@ async function deleteUstaTolov(id){
     },
     ()=>{DB.ustaTolovlari.push(t);renderUstalar();});
 }
+let ustaFilter={obyekt:''};
+function applyUstaFilter(){ustaFilter={obyekt:document.getElementById('ufObyekt').value};renderUstalar();}
+function clearUstaFilter(){document.getElementById('ufObyekt').value='';ustaFilter={obyekt:''};renderUstalar();}
 function renderUstalar(){
-  const list=getUstalar(),isP=currentUser.rol==='prorab';
+  fillObyektFilter('ufObyekt');
+  let list=getUstalar();
+  if(ustaFilter.obyekt)list=list.filter(u=>u.obyektId===ustaFilter.obyekt);
+  const isP=currentUser.rol==='prorab';
   const el=document.getElementById('ustaList');
   if(!list.length){
+    if(ustaFilter.obyekt){el.innerHTML='<div class="empty"><div class="empty-ic"><i class="ico"><svg><use href="#ic-user"/></svg></i></div><div class="empty-t">Bu obyektda usta yo\'q</div></div>';return;}
     el.innerHTML=isP
       ?'<div class="empty"><div class="empty-ic"><i class="ico"><svg><use href="#ic-user"/></svg></i></div><div class="empty-t">Hali usta shartnomasi yo\'q</div><button class="btn-add" style="margin-top:14px" onclick="openUstaModal()">+ Birinchi ustani qo\'shish</button></div>'
       :'<div class="empty"><div class="empty-ic"><i class="ico"><svg><use href="#ic-user"/></svg></i></div><div class="empty-t">Hali usta shartnomasi yo\'q</div></div>';
@@ -3266,7 +3307,8 @@ function renderUstalar(){
         <div class="zk-icon"><i class="ico"><svg><use href="#ic-user"/></svg></i></div>
         <div style="flex:1;min-width:0">
           <div class="zk-title">${esc(u.ism)}</div>
-          <div class="zk-sub">${esc(u.mutaxassislik||'')}${isP&&ob?' · '+esc(ob.id):''}</div>
+          <div class="zk-sub">${esc(u.mutaxassislik||'')}</div>
+          ${isP&&ob?`<div style="font-size:11px;color:var(--gold-d);font-weight:700;margin-top:2px"><i class="ico" style="width:12px;height:12px;vertical-align:-1px"><svg><use href="#ic-building"/></svg></i> ${esc(ob.nom)}</div>`:''}
         </div>
         <span class="sb ${belgilanmagan?'sb-y':u.holat==='tugallangan'?'sb-g':'sb-y'}">${belgilanmagan?"Hisob-kitob kutilmoqda":u.holat==='tugallangan'?'Tugallangan':'Jarayonda'}</span>
       </div>
