@@ -23,7 +23,7 @@ const j = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 const err = (msg: string, status = 400) => j({ ok: false, error: msg }, status);
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-3.8-flash";
 
 const PROMPT = `Sen qurilish/ta'mirlash xarajatlari ro'yxatini o'qiydigan yordamchisan.
 Rasmda qo'lda yozilgan yoki chop etilgan xarajatlar ro'yxati bor (mahsulot nomi, miqdori,
