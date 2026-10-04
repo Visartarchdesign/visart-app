@@ -1,13 +1,17 @@
 // ═══════════════════════════════════════════════════════════════
 // VISART — parse-xarajat-rasm Edge Function
 // Vazifa: qo'lda yozilgan/chop etilgan xarajatlar ro'yxati rasmini
-// Claude (Anthropic) vision modeliga yuborib, undan JSON ko'rinishida
-// qatorlarga ajratilgan xarajatlar ro'yxatini qaytaradi.
+// Google Gemini (bepul tarifi bor) vision modeliga yuborib, undan
+// JSON ko'rinishida qatorlarga ajratilgan xarajatlar ro'yxatini
+// qaytaradi.
+//
 // Deploy: Supabase Dashboard → Edge Functions → Deploy new function
 //         (nomi aniq: parse-xarajat-rasm) → shu faylni joylashtiring
-// MUHIM: ANTHROPIC_API_KEY maxfiy kalitini albatta
+//
+// MUHIM: GEMINI_API_KEY maxfiy kalitini albatta
 //        Edge Functions → Secrets bo'limida sozlang — bu yerda
 //        hech qachon ochiq yozilmaydi.
+// Bepul kalit olish: https://aistudio.google.com/app/apikey
 // ═══════════════════════════════════════════════════════════════
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
 
@@ -19,7 +23,9 @@ const j = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 const err = (msg: string, status = 400) => j({ ok: false, error: msg }, status);
 
-const SYSTEM_PROMPT = `Sen qurilish/ta'mirlash xarajatlari ro'yxatini o'qiydigan yordamchisan.
+const GEMINI_MODEL = "gemini-2.0-flash";
+
+const PROMPT = `Sen qurilish/ta'mirlash xarajatlari ro'yxatini o'qiydigan yordamchisan.
 Rasmda qo'lda yozilgan yoki chop etilgan xarajatlar ro'yxati bor (mahsulot nomi, miqdori,
 narxi, jami summasi — tartib aralash bo'lishi mumkin, ba'zi qatorlarda faqat jami summa
 yozilgan bo'lishi mumkin).
@@ -34,7 +40,9 @@ Qoidalar:
 - Raqamlarni probel/vergul/so'm belgisisiz, sof son sifatida yoz (masalan "1 500 000 so'm" → 1500000).
 - Birlikni ro'yxatdagi so'zga eng yaqinini tanlab qo'y (mos kelmasa "dona" qo'y).
 - Rasmda umuman o'qib bo'lmaydigan/xira joy bo'lsa, o'sha qatorni butunlay tushirib qoldir.
-- Agar rasmda hech qanday xarajat qatori topa olmasang — bo'sh massiv [] qaytar.`;
+- Agar rasmda hech qanday xarajat qatori topa olmasang — bo'sh massiv [] qaytar.
+
+Shu rasmdagi xarajatlar ro'yxatini yuqoridagi qoidalar bo'yicha JSON qilib chiqar.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -62,39 +70,33 @@ Deno.serve(async (req) => {
   const mediaType = (payload.mediaType as string) || "image/jpeg";
   if (!imageBase64) return err("Rasm yuborilmadi");
 
-  const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!ANTHROPIC_API_KEY) return err("Server sozlanmagan: ANTHROPIC_API_KEY sozlanmagan (Edge Functions → Secrets)", 500);
+  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+  if (!GEMINI_API_KEY) return err("Server sozlanmagan: GEMINI_API_KEY sozlanmagan (Edge Functions → Secrets)", 500);
 
   // data: URI bo'lsa, faqat base64 qismini ajratamiz
   const base64Data = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+    const res = await fetch(url, {
       method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 4096,
-        system: SYSTEM_PROMPT,
-        messages: [{
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } },
-            { type: "text", text: "Shu rasmdagi xarajatlar ro'yxatini yuqoridagi qoidalar bo'yicha JSON qilib chiqar." },
+        contents: [{
+          parts: [
+            { text: PROMPT },
+            { inline_data: { mime_type: mediaType, data: base64Data } },
           ],
         }],
+        generationConfig: { temperature: 0, maxOutputTokens: 4096 },
       }),
     });
     const data = await res.json();
     if (!res.ok) {
-      console.error("anthropic error", data);
+      console.error("gemini error", data);
       return err("AI xizmatidan xato: " + (data?.error?.message || res.status));
     }
-    const textOut: string = data?.content?.[0]?.text || "";
+    const textOut: string = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
     let items: unknown;
     try {
       const match = textOut.match(/\[[\s\S]*\]/);
