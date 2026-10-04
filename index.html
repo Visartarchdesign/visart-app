@@ -1536,7 +1536,7 @@ function kontToRow(k){return{id:k.id,obyekt_id:k.obyektId,nomi:k.nomi,turi:k.tur
 function kontTolRow(r){return{id:r.id,kontragentId:r.kontragent_id,obyektId:r.obyekt_id,sana:r.sana,summa:Number(r.summa),turi:r.turi,izoh:r.izoh};}
 function kontTolToRow(t){return{id:t.id,kontragent_id:t.kontragentId,obyekt_id:t.obyektId,sana:t.sana,summa:t.summa,turi:t.turi,izoh:t.izoh,kompaniya_id:currentUser.kompaniyaId};}
 
-async function loadDB(){
+async function loadDBOnce(){
   // Mijoz faqat o'z obyektini oladi — trafik va sizib chiqishni kamaytiradi (RLS server tomonda asosiy himoya)
   const mine=currentUser&&currentUser.rol==='mijoz'?currentUser.obyektId:null;
   const f=q=>mine?q.eq('obyekt_id',mine):q;
@@ -1560,8 +1560,36 @@ async function loadDB(){
     f(sb.from('kontragentlar').select(KO_COLS).limit(1000)),
     f(sb.from('kontragent_tolovlari').select(KT_COLS).order('sana',{ascending:false}).order('id',{ascending:false}).limit(2000))
   ]);
-  if(ob.error||xa.error||to.error||za.error){notify('Bazadan yuklashda xato — internetni yoki Supabase sozlamalarini tekshiring');console.error(ob.error||xa.error||to.error||za.error);return{obyektlar:[],xarajatlar:[],tolovlar:[],zakazlar:[],xizmatTolovlar:[],ustalar:[],ustaTolovlari:[],kontragentlar:[],kontragentTolovlari:[]};}
-  return{obyektlar:(ob.data||[]).map(obRow),xarajatlar:(xa.data||[]).map(xarRow),tolovlar:(to.data||[]).map(tolRow),zakazlar:(za.data||[]).map(zakRow),xizmatTolovlar:xz.error?[]:(xz.data||[]).map(xizRow),ustalar:us.error?[]:(us.data||[]).map(ustaRow),ustaTolovlari:ut.error?[]:(ut.data||[]).map(ustaTolRow),kontragentlar:ko.error?[]:(ko.data||[]).map(kontRow),kontragentTolovlari:kt.error?[]:(kt.data||[]).map(kontTolRow)};
+  // MUHIM: barcha 9 ta jadvalning xatosi tekshiriladi — birortasi ham "jim" 0 qilib ko'rsatilmaydi.
+  // Avval faqat 4 tasi tekshirilardi, qolgani xato bo'lsa ham sezdirmasdan bo'sh massiv qaytarardi —
+  // shu sabab F5 bosganda "usta pullari"/"mualliflik nazorati" vaqti-vaqti bilan 0 ko'rinardi.
+  const results={ob,xa,to,za,xz,us,ut,ko,kt};
+  const failed=Object.entries(results).filter(([,r])=>r.error);
+  if(failed.length){
+    const err=new Error('loadDB qisman muvaffaqiyatsiz: '+failed.map(([k])=>k).join(','));
+    err.details=failed.map(([,r])=>r.error);
+    throw err;
+  }
+  return{obyektlar:(ob.data||[]).map(obRow),xarajatlar:(xa.data||[]).map(xarRow),tolovlar:(to.data||[]).map(tolRow),zakazlar:(za.data||[]).map(zakRow),xizmatTolovlar:(xz.data||[]).map(xizRow),ustalar:(us.data||[]).map(ustaRow),ustaTolovlari:(ut.data||[]).map(ustaTolRow),kontragentlar:(ko.data||[]).map(kontRow),kontragentTolovlari:(kt.data||[]).map(kontTolRow)};
+}
+async function loadDB(){
+  // Vaqtinchalik tarmoq/server kechikishi tufayli bitta so'rov muvaffaqiyatsiz bo'lib qolishi mumkin —
+  // shuning uchun darhol taslim bo'lmasdan, qisqa kutib, yana bir marta urinib ko'ramiz.
+  try{
+    return await loadDBOnce();
+  }catch(e1){
+    console.warn('loadDB 1-urinish muvaffaqiyatsiz, qayta urinilmoqda...',e1);
+    await new Promise(r=>setTimeout(r,800));
+    try{
+      return await loadDBOnce();
+    }catch(e2){
+      console.error('loadDB 2-urinish ham muvaffaqiyatsiz',e2,e2.details);
+      notify("Ba'zi ma'lumotlar yuklanmadi — internetni tekshirib, sahifani qayta yangilang");
+      // Oldingi muvaffaqiyatli yuklangan DB bo'lsa, uni saqlab qolamiz (noto'g'ri 0 ko'rsatmaslik uchun)
+      if(DB&&DB.obyektlar&&DB.obyektlar.length)return DB;
+      return{obyektlar:[],xarajatlar:[],tolovlar:[],zakazlar:[],xizmatTolovlar:[],ustalar:[],ustaTolovlari:[],kontragentlar:[],kontragentTolovlari:[]};
+    }
+  }
 }
 let _refreshSeq=0;
 async function refreshDB(){const seq=++_refreshSeq;const d=await loadDB();if(seq===_refreshSeq)DB=d;} // eski javob yangisini yozmasin (race guard)
