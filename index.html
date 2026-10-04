@@ -690,7 +690,10 @@ textarea.inp{resize:vertical;min-height:80px}
     <div class="view" id="viewXarajatlar">
       <div class="ph">
         <div><div class="ph-t">Xarajatlar</div><div class="ph-s">Barcha sarflar</div></div>
-        <button class="btn-add" id="btnAddXarajat" onclick="openModal('xarajat')">+ Qo'shish</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn-e" id="btnAddXarajatRasm" onclick="openXarajatRasm()" title="Ro'yxat rasmidan avtomatik o'qish (AI)"><i class="ico"><svg><use href="#ic-camera"/></svg></i> Rasmdan</button>
+          <button class="btn-add" id="btnAddXarajat" onclick="openModal('xarajat')">+ Qo'shish</button>
+        </div>
       </div>
       <div class="seg-tabs">
         <button class="seg-btn on" id="xtSegList" onclick="switchXarajatlarTab('list')">Xarajatlar</button>
@@ -955,6 +958,39 @@ textarea.inp{resize:vertical;min-height:80px}
       <div class="fg"><label class="fl">Izoh (ixtiyoriy)</label><textarea class="inp" id="fIzoh" placeholder="Qo'shimcha ma'lumot…"></textarea></div>
     </div>
     <div class="fa"><button class="btn-cancel" onclick="closeModal('xarajat')">Bekor</button><button class="btn-save" onclick="saveXarajat()">Saqlash</button></div>
+  </div>
+</div>
+
+<!-- MODAL: XARAJATLAR RO'YXATINI RASMDAN O'QISH (AI) -->
+<div class="mo" id="modalXarajatRasm" role="dialog" aria-modal="true">
+  <div class="ms" style="max-width:640px">
+    <div class="ms-hd">
+      <div class="handle"></div><div class="ms-t">Ro'yxatni rasmdan o'qish</div>
+      <div class="fg" style="margin-top:10px;margin-bottom:0"><label class="fl">Obyekt <span style="color:var(--err)">*</span></label><select class="inp" id="xrObyekt" onchange="xrUpdateSubkatOptions()" style="border:2px solid var(--gold-d);font-weight:700"></select></div>
+    </div>
+    <div class="ms-body">
+      <div id="xrStep1">
+        <div class="info-box">Qo'lda yozilgan yoki chop etilgan xarajatlar ro'yxatini (masalan qurilish mollari spisogi) suratga oling — sun'iy intellekt o'qib, qatorlarga ajratib beradi. Saqlashdan oldin hammasini tekshirib, kerak bo'lsa tuzatasiz yoki keraksizini o'chirasiz.</div>
+        <div class="upl-choice">
+          <label class="upl" for="xrCamera"><input type="file" id="xrCamera" accept="image/*" capture="environment" onchange="handleXarajatRasmFile(this)" style="display:none"><div class="upl-ic"><i class="ico"><svg><use href="#ic-camera"/></svg></i></div><div class="upl-t">Kamera</div></label>
+          <label class="upl" for="xrGallery"><input type="file" id="xrGallery" accept="image/*" onchange="handleXarajatRasmFile(this)" style="display:none"><div class="upl-ic"><i class="ico"><svg><use href="#ic-camera"/></svg></i></div><div class="upl-t">Galereya</div></label>
+        </div>
+        <div id="xrStatus" style="font-size:12.5px;color:var(--t3);margin-top:8px"></div>
+        <img id="xrPreview" style="display:none;max-width:100%;border-radius:var(--r2);margin-top:10px">
+      </div>
+      <div id="xrStep2" style="display:none">
+        <div class="fr">
+          <div class="fg"><label class="fl">Kategoriya (hammasiga)</label><select class="inp" id="xrKategoriya" onchange="xrUpdateSubkatOptions()"><option>Qurilish mollari</option><option>Boshqa xarajatlar</option></select></div>
+          <div class="fg"><label class="fl">Sub-kategoriya (hammasiga)</label><select class="inp" id="xrSubkat"></select></div>
+        </div>
+        <div id="xrTableWrap" style="margin-top:10px"></div>
+        <button type="button" class="btn-e" style="margin-top:4px" onclick="xrAddEmptyRow()">+ Qator qo'shish</button>
+      </div>
+    </div>
+    <div class="fa">
+      <button class="btn-cancel" onclick="closeModal('xarajatRasm')">Bekor</button>
+      <button class="btn-save" id="xrSaveBtn" style="display:none" onclick="saveXarajatRasmBatch()">Hammasini saqlash</button>
+    </div>
   </div>
 </div>
 
@@ -2461,6 +2497,7 @@ function initApp(){
     </div>`).join('');
   const isM=currentUser.rol==='mijoz';
   document.getElementById('btnAddXarajat').style.display=isM?'none':'flex';
+  document.getElementById('btnAddXarajatRasm').style.display=isM?'none':'flex';
   document.getElementById('btnAddTolov').style.display=isM?'none':'flex';
   document.getElementById('btnAddZakaz').style.display=isM?'none':'flex';
   document.getElementById('btnAddUsta').style.display=isM?'none':'flex';
@@ -2917,7 +2954,8 @@ function switchXarajatlarTab(tab){
   document.getElementById('xtSegUsta').classList.toggle('on',tab==='ustalar');
   document.getElementById('xarajatlarListWrap').style.display=tab==='list'?'block':'none';
   document.getElementById('xarajatlarUstaWrap').style.display=tab==='ustalar'?'block':'none';
-  document.getElementById('btnAddXarajat').style.display=tab==='list'?'':'none';
+  document.getElementById('btnAddXarajat').style.display=tab==='list'&&currentUser.rol!=='mijoz'?'':'none';
+  document.getElementById('btnAddXarajatRasm').style.display=tab==='list'&&currentUser.rol!=='mijoz'?'':'none';
   if(tab==='ustalar')renderUstalar();
 }
 function renderXarajatlar(){
@@ -4066,6 +4104,127 @@ function updateSubkat(){
   document.getElementById('fBoshqaWrap').style.display=isBoshqa?'block':'none';
   if(isBoshqa)switchBoshqaTolovMode('toliq');
 }
+
+// ─── XARAJATLAR RO'YXATINI RASMDAN O'QISH (AI) ───
+let _xrItems=[];
+function openXarajatRasm(){
+  const obs=getObs();
+  document.getElementById('xrObyekt').innerHTML='<option value="">— Obyektni tanlang —</option>'+obs.map(o=>`<option value="${o.id}">${esc(o.nom)}</option>`).join('');
+  document.getElementById('xrObyekt').value='';
+  document.getElementById('xrKategoriya').value='Qurilish mollari';
+  xrUpdateSubkatOptions();
+  document.getElementById('xrStep1').style.display='block';
+  document.getElementById('xrStep2').style.display='none';
+  document.getElementById('xrSaveBtn').style.display='none';
+  document.getElementById('xrStatus').textContent='';
+  const preview=document.getElementById('xrPreview');preview.style.display='none';preview.src='';
+  document.getElementById('xrCamera').value='';document.getElementById('xrGallery').value='';
+  _xrItems=[];
+  document.getElementById('modalXarajatRasm').classList.add('on');
+}
+function xrUpdateSubkatOptions(){
+  const obId=document.getElementById('xrObyekt').value;
+  const ob=DB.obyektlar.find(o=>o.id===obId);
+  const obyektTuri=ob?ob.obyektTuri:'ikki';
+  const k=document.getElementById('xrKategoriya').value;
+  const list=subkatsForObyektTuri(k,obyektTuri);
+  document.getElementById('xrSubkat').innerHTML=list.map(s=>`<option>${esc(s)}</option>`).join('');
+}
+async function handleXarajatRasmFile(input){
+  const file=input.files&&input.files[0];if(!file)return;
+  const obyektId=document.getElementById('xrObyekt').value;
+  if(!obyektId){notify('Avval obyektni tanlang');input.value='';return;}
+  const status=document.getElementById('xrStatus');
+  status.textContent='Rasm tayyorlanmoqda...';
+  try{
+    const compressed=await compressImage(file);
+    const dataUrl=await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsDataURL(compressed);});
+    const preview=document.getElementById('xrPreview');preview.src=dataUrl;preview.style.display='block';
+    status.textContent="Sun'iy intellekt o'qimoqda, biroz kuting (10-20 soniya)...";
+    const{data,error}=await sb.functions.invoke('parse-xarajat-rasm',{body:{imageBase64:dataUrl,mediaType:'image/jpeg'}});
+    if(error||!data||data.ok!==true){
+      status.textContent='';
+      notify((data&&data.error)||"Rasmni o'qib bo'lmadi — qayta urinib ko'ring");
+      return;
+    }
+    _xrItems=(data.items||[]).map(it=>{
+      const narx=it.narx!=null?Number(it.narx):null;
+      const miqdor=it.miqdor!=null?Number(it.miqdor):null;
+      return{
+        mahsulot:it.mahsulot||'',
+        birlik:it.birlik||'dona',
+        narx,miqdor,
+        jami:it.jami!=null?Number(it.jami):(narx&&miqdor?Math.round(narx*miqdor):0),
+        include:true
+      };
+    });
+    if(!_xrItems.length){status.textContent='';notify('Rasmdan hech narsa topilmadi — aniqroq rasm bilan qayta urining');return;}
+    status.textContent=`${_xrItems.length} ta qator topildi — hammasini tekshirib, so'ng saqlang`;
+    document.getElementById('xrStep2').style.display='block';
+    document.getElementById('xrSaveBtn').style.display='';
+    renderXarajatRasmTable();
+  }catch(e){
+    console.error(e);status.textContent='';notify('Xatolik yuz berdi — qayta urinib ko\'ring');
+  }
+}
+function renderXarajatRasmTable(){
+  const wrap=document.getElementById('xrTableWrap');
+  const BIRLIKLAR=['dona','kg','metr','litr','m²','m³',"to'plam"];
+  wrap.innerHTML=_xrItems.map((it,i)=>`
+    <div class="card" id="xr-row-${i}" style="padding:10px;margin-bottom:8px;${it.include?'':'opacity:.45'}">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+        <input type="checkbox" id="xr-include-${i}" ${it.include?'checked':''} onchange="xrToggleInclude(${i},this.checked)">
+        <input class="inp" style="flex:1" type="text" id="xr-mahsulot-${i}" value="${esc(it.mahsulot)}" placeholder="Mahsulot nomi" oninput="_xrItems[${i}].mahsulot=this.value">
+        <button type="button" onclick="xrRemoveRow(${i})" style="border:none;background:none;color:var(--err);font-size:18px;cursor:pointer;padding:0 6px">✕</button>
+      </div>
+      <div class="fr3">
+        <select class="inp" id="xr-birlik-${i}" onchange="_xrItems[${i}].birlik=this.value">
+          ${BIRLIKLAR.map(b=>`<option ${b===it.birlik?'selected':''}>${b}</option>`).join('')}
+        </select>
+        <input class="inp" type="number" id="xr-narx-${i}" placeholder="Narx" value="${it.narx!=null?it.narx:''}" oninput="xrRecalc(${i})">
+        <input class="inp" type="number" id="xr-miqdor-${i}" placeholder="Miqdor" value="${it.miqdor!=null?it.miqdor:''}" oninput="xrRecalc(${i})">
+      </div>
+      <div class="fg" style="margin-top:6px"><label class="fl">Jami</label><input class="inp" type="number" id="xr-jami-${i}" value="${it.jami||0}" oninput="xrJamiManual(${i},this.value)"></div>
+    </div>
+  `).join('')+'<div style="text-align:right;font-weight:700;color:var(--gold-d);margin-top:4px" id="xrTotal"></div>';
+  updateXrTotal();
+}
+function xrToggleInclude(i,checked){_xrItems[i].include=checked;const row=document.getElementById('xr-row-'+i);if(row)row.style.opacity=checked?'1':'.45';updateXrTotal();}
+function xrRecalc(i){
+  const n=parseFloat(document.getElementById('xr-narx-'+i).value)||0;
+  const m=parseFloat(document.getElementById('xr-miqdor-'+i).value)||0;
+  _xrItems[i].narx=n||null;_xrItems[i].miqdor=m||null;
+  if(n&&m){_xrItems[i].jami=Math.round(n*m);document.getElementById('xr-jami-'+i).value=_xrItems[i].jami;}
+  updateXrTotal();
+}
+function xrJamiManual(i,val){_xrItems[i].jami=parseFloat(val)||0;updateXrTotal();}
+function xrRemoveRow(i){_xrItems.splice(i,1);renderXarajatRasmTable();}
+function xrAddEmptyRow(){_xrItems.push({mahsulot:'',birlik:'dona',narx:null,miqdor:null,jami:0,include:true});renderXarajatRasmTable();}
+function updateXrTotal(){
+  const t=document.getElementById('xrTotal');if(!t)return;
+  const sum=_xrItems.filter(it=>it.include).reduce((s,it)=>s+(it.jami||0),0);
+  t.textContent='Tanlanganlar umumiy: '+fmt(sum);
+}
+async function saveXarajatRasmBatch(){
+  const obyektId=document.getElementById('xrObyekt').value;
+  if(!obyektId){notify('Obyektni tanlang');return;}
+  const kat=document.getElementById('xrKategoriya').value;
+  const subkat=document.getElementById('xrSubkat').value;
+  if(!subkat){notify('Sub-kategoriyani tanlang');return;}
+  const rows=_xrItems.filter(it=>it.include&&it.mahsulot&&it.mahsulot.trim());
+  if(!rows.length){notify('Saqlash uchun kamida bitta qatorni belgilang va mahsulot nomini kiriting');return;}
+  const sana=today();
+  const toInsert=rows.map(it=>xarToRow({
+    id:genId('XAR'),obyektId,sana,kat,subkat,mahsulot:it.mahsulot.trim(),
+    birlik:it.birlik||null,narx:it.narx,miqdor:it.miqdor,jami:Math.round(it.jami||0),
+    izoh:"Rasmdan AI orqali o'qildi",rasmUrl:null,rasmlarQoshimcha:'[]',umumiyNarx:null,tolovTuri:null
+  }));
+  const{error}=await sb.from('xarajatlar').insert(toInsert);
+  if(error){notify('Saqlashda xato');console.error(error);return;}
+  await refreshDB();closeModal('xarajatRasm');renderXarajatlar();
+  notify(`${toInsert.length} ta xarajat saqlandi`);
+}
+
 let boshqaTolovMode='toliq';
 function switchBoshqaTolovMode(mode){
   boshqaTolovMode=mode;
