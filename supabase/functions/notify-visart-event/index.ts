@@ -30,6 +30,7 @@
 //   obyekt_id: "<obyektlar.id>" | null,
 //   matn_moliya: "<ichki, to'liq matn — MAJBURIY>",
 //   matn_mijoz: "<mijozga ko'rsatiladigan qisqa matn>" | null,
+//   summa: <raqam — kunlik yig'indi digest uchun> | null,
 //   urgent: boolean,
 // }
 //
@@ -39,6 +40,7 @@
 //   tuzatish: true,
 //   matn_moliya: "<yangilangan to'liq matn>",
 //   matn_mijoz: "<yangilangan qisqa matn>" | null,
+//   summa: <yangilangan raqam> | null,
 // }
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -147,7 +149,7 @@ Deno.serve(async (req: Request) => {
       for (const row of topilgan) {
         const matn = row.guruh === "moliya" ? body.matn_moliya : body.matn_mijoz;
         if (!matn) continue;
-        const r = await sendToVisart({ tuzatish_hodisa_id: row.hodisa_id, matn });
+        const r = await sendToVisart({ tuzatish_hodisa_id: row.hodisa_id, matn, summa: body.summa ?? undefined });
         natijalar[row.guruh] = r.data;
       }
       return json({ ok: true, tuzatildi: natijalar });
@@ -163,6 +165,7 @@ Deno.serve(async (req: Request) => {
       matn: body.matn_moliya,
       group: "moliya",
       obyekt_id: body.obyekt_id ?? undefined,
+      summa: body.summa ?? undefined,
       urgent: !!body.urgent,
     });
     natijalar.moliya = moliyaJavob.data;
@@ -179,6 +182,7 @@ Deno.serve(async (req: Request) => {
         matn: body.matn_mijoz,
         group: "obyekt",
         obyekt_id: body.obyekt_id,
+        summa: body.summa ?? undefined,
         urgent: !!body.urgent,
       });
       natijalar.obyekt = obyektJavob.data;
