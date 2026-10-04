@@ -3614,7 +3614,7 @@ async function loadChatFor(obId){
     const isMe=m.from===currentUser.login;
     const d=new Date(m.time);
     const timeStr=d.toLocaleDateString('uz-UZ')+' '+d.toLocaleTimeString('uz-UZ',{hour:'2-digit',minute:'2-digit'});
-    return `<div class="msg-row ${isMe?'msg-me':'msg-them'}"><div><div class="msg-bubble">${escapeHtml(m.text)}</div><div class="msg-time">${m.fromName} · ${timeStr}</div></div></div>`;
+    return `<div class="msg-row ${isMe?'msg-me':'msg-them'}"><div><div class="msg-bubble">${escapeHtml(m.text)}</div><div class="msg-time">${escapeHtml(m.fromName)} · ${timeStr}</div></div></div>`;
   }).join('');
   wrap.scrollTop=wrap.scrollHeight;
   // Mark as read

@@ -84,6 +84,19 @@ Deno.serve(async (req) => {
     return false;
   };
 
+  // ── IP bo'yicha ro'yxatdan o'tish urinishlarini cheklash (kompaniya kodini
+  //    "brute-force" qilib topishning oldini olish uchun) ──
+  const registerRateLimited = async () => {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "noma'lum";
+    const hourAgo = new Date(Date.now() - 3600_000).toISOString();
+    const { count } = await admin.from("register_attempts")
+      .select("*", { count: "exact", head: true })
+      .eq("ip", ip).gte("created_at", hourAgo);
+    if ((count ?? 0) >= 10) return true;
+    await admin.from("register_attempts").insert({ ip });
+    return false;
+  };
+
   // ── Server-side telefon verifikatsiyasi ──
   const verifyPhone = async (login: string, tel: string) => {
     const { data: pr } = await admin.from("prorablar").select("tel").eq("login", login).maybeSingle();
@@ -138,6 +151,8 @@ Deno.serve(async (req) => {
       // ══ 3. Ro'yxatdan o'tish (prorab) — kompaniya kodi kompaniyalar
       //       jadvalidan tekshiriladi, topilgan kompaniyaga bog'lanadi ══
       case "register_prorab": {
+        if (await registerRateLimited()) return err("Juda ko'p urinish — 1 soatdan keyin qayta urining", 429);
+
         const { kod, ism, tel, login: rawLogin, parol } = payload as Record<string, string>;
         const login = normLogin(rawLogin);
         if (!LOGIN_RE.test(login)) return err("Login: 3–32 ta lotin harf/raqam/nuqta");
