@@ -1612,6 +1612,60 @@ function calcEditTolKurs(){
   const kurs=parseFloat(document.getElementById('eTolKurs').value)||0;
   document.getElementById('eTolSommaHisob').value=usd&&kurs?fmt(Math.round(usd*kurs)):'';
 }
+
+// ─── TELEGRAM/VISARTDESIGN.UZ HODISA BILDIRISHNOMALARI ───
+// Fire-and-forget: bu bildirishnomalar hech qachon asosiy saqlash
+// amalini to'xtatmasligi yoki buzmasligi kerak — shuning uchun
+// chaqiruvchi tomonda HECH QACHON await qilinmaydi va xato bo'lsa
+// ham jim yutiladi.
+async function notifyVisartEvent(opts){
+  try{
+    await sb.functions.invoke('notify-visart-event',{body:{
+      hodisa_turi:opts.type,obyekt_id:opts.obyektId,matn:opts.matn,
+      group:opts.group||'moliya',urgent:!!opts.urgent,
+      entity_turi:opts.entityTuri,entity_id:opts.entityId
+    }});
+  }catch(e){console.warn('notifyVisartEvent xato (e\'tiborsiz qoldirildi)',e);}
+}
+async function notifyVisartTuzatish(entityTuri,entityId,hodisaTuri,matn){
+  try{
+    await sb.functions.invoke('notify-visart-event',{body:{
+      tuzatish:true,entity_turi:entityTuri,entity_id:entityId,hodisa_turi:hodisaTuri,matn
+    }});
+  }catch(e){console.warn('notifyVisartTuzatish xato (e\'tiborsiz qoldirildi)',e);}
+}
+// Obyektning joriy qoldig'ini (mijoz to'lovi - xarajat - mualliflik nazorati olingan) hisoblaydi.
+// renderKassa()dagi "q" formulasi bilan bir xil — balans nolga/minusga o'tishini kuzatish uchun.
+function obyektQoldiqHisobla(obyektId){
+  const xar=DB.xarajatlar.filter(x=>x.obyektId===obyektId);
+  const tol=DB.tolovlar.filter(t=>t.obyektId===obyektId);
+  const zak=DB.zakazlar.filter(z=>z.obyektId===obyektId);
+  const usta=DB.ustalar.filter(u=>u.obyektId===obyektId);
+  const ustaTolList=DB.ustaTolovlari.filter(t=>usta.some(u=>u.id===t.ustaId));
+  const kont=DB.kontragentlar.filter(k=>k.obyektId===obyektId);
+  const kontTolList=DB.kontragentTolovlari.filter(t=>kont.some(k=>k.id===t.kontragentId));
+  const jXarajat=xar.reduce((s,x)=>s+x.jami,0),jT=tol.reduce((s,t)=>s+t.summa,0);
+  const jZakAvans=zak.reduce((s,z)=>s+(Number(z.avans)||0),0);
+  const jUstaTolov=ustaTolList.reduce((s,t)=>s+t.summa,0);
+  const jKontTolov=kontTolList.reduce((s,t)=>s+t.summa,0);
+  const jX=jXarajat+jZakAvans+jUstaTolov+jKontTolov;
+  const ob=DB.obyektlar.find(o=>o.id===obyektId);
+  const xizList=DB.xizmatTolovlar.filter(z=>z.obyektId===obyektId);
+  const xizOlingan=xizList.reduce((s,z)=>s+z.summa,0);
+  return jT-jX-xizOlingan;
+}
+// Xarajat/to'lov qo'shilgandan keyin chaqiriladi: balans musbatdan nol/minusga o'tsa, alohida xabar yuboradi.
+function tekshirBalansOginish(obyektId,qOldin){
+  const qYangi=obyektQoldiqHisobla(obyektId);
+  if(qOldin>0&&qYangi<=0){
+    const ob=DB.obyektlar.find(o=>o.id===obyektId);
+    notifyVisartEvent({
+      type:'obyekt_balansi_minusga_otdi',obyektId,group:'moliya',urgent:false,
+      entityTuri:'obyekt_balans',entityId:obyektId+'-'+today(),
+      matn:`Obyekt "${ob?ob.nom:obyektId}": pul qoldig'i ${qYangi<0?'manfiyga':'nolga'} tushdi (qoldiq: ${fmt(qYangi)} so'm).`
+    });
+  }
+}
 function zakRow(r){return{id:r.id,obyektId:r.obyekt_id,nomi:r.nomi,turi:r.turi,taminotchi:r.taminotchi,umumiy:Number(r.umumiy),avans:Number(r.avans),sana:r.sana,tayyorSana:r.tayyor_sana,holat:r.holat,izoh:r.izoh};}
 function zakToRow(z){return{id:z.id,obyekt_id:z.obyektId,nomi:z.nomi,turi:z.turi,taminotchi:z.taminotchi,umumiy:z.umumiy,avans:z.avans,sana:z.sana,tayyor_sana:z.tayyorSana||null,holat:z.holat,izoh:z.izoh,kompaniya_id:currentUser.kompaniyaId};}
 function xizRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,summa:Number(r.summa),izoh:r.izoh};}
@@ -3184,6 +3238,11 @@ async function saveZakaz(){
   if(error){notify('Saqlashda xato');console.error(error);return;}
   await refreshDB();closeModal('zakaz');renderZakaz();notify('Buyurtma qo\'shildi');
   ['zNomi','zTaminotchi','zUmumiy','zAvans','zQoldiq','zTayyorSana','zIzoh'].forEach(id=>document.getElementById(id).value='');
+  if(avans>0){
+    const ob=DB.obyektlar.find(o=>o.id===obyektId);
+    notifyVisartEvent({type:'avans_qayd_etildi',obyektId,group:'moliya',entityTuri:'zakaz',entityId:z.id,
+      matn:`Obyekt "${ob?ob.nom:obyektId}": buyurtma avansi qayd etildi — ${nomi}, ${fmt(avans)} so'm.`});
+  }
 }
 function openEditZakaz(id){
   const z=DB.zakazlar.find(i=>i.id===id);if(!z)return;
@@ -4081,6 +4140,10 @@ async function saveEditObyekt(){
   const{error}=await sb.from('obyektlar').update(obToRow(updatedOb)).eq('id',id);
   if(error){notify('Saqlashda xato');console.error(error);return;}
   await refreshDB();document.getElementById('modalEditObyekt').classList.remove('on');renderObyektlar();notify("Obyekt yangilandi");
+  if(newHolat==='Muzlatilgan'&&oldOb.holat!=='Muzlatilgan'){
+    notifyVisartEvent({type:'obyekt_muzlatildi',obyektId:id,group:'moliya',urgent:true,entityTuri:'obyekt_muzlatish',entityId:id+'-'+today(),
+      matn:`Obyekt "${nom}": qurilish holati "Muzlatilgan"ga o'tkazildi.`});
+  }
 }
 
 // ─── XABAR (endi eski parolni ko'rsatib bo'lmaydi — yangi parol yaratib yuboriladi) ───
@@ -4421,9 +4484,16 @@ async function saveXarajat(){
     if(!mahsulot||!validSumma(narx)||!validSumma(miqdor)){notify("Barcha maydonlarni to'g'ri to'ldiring");return;}
     x={id:genId('XAR'),obyektId,sana:today(),kat,subkat,mahsulot,birlik:document.getElementById('fBirlik').value,narx,miqdor,jami:Math.round(narx*miqdor),izoh,rasmUrl,rasmlarQoshimcha,umumiyNarx:null,tolovTuri:null};
   }
+  const qOldin=obyektQoldiqHisobla(obyektId);
   const{error}=await sb.from('xarajatlar').insert(xarToRow(x));
   if(error){notify('Saqlashda xato');console.error(error);return;}
   await refreshDB();closeModal('xarajat');renderXarajatlar();notify('Xarajat saqlandi: '+fmt(x.jami));
+  {
+    const ob=DB.obyektlar.find(o=>o.id===obyektId);
+    notifyVisartEvent({type:'xarajat_qoshildi',obyektId,group:'moliya',entityTuri:'xarajat',entityId:x.id,
+      matn:`Obyekt "${ob?ob.nom:obyektId}": xarajat qo'shildi — ${x.mahsulot}, ${fmt(x.jami)} so'm.`});
+    tekshirBalansOginish(obyektId,qOldin);
+  }
   ['fMahsulot','fNarx','fMiqdor','fJami','fIzoh','fRasmUrl','fBoshqaUmumiy','fBoshqaKelishilgan','fBoshqaAvans','fBoshqaQoldiq'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fRasmlarQoshimcha').value='[]';
   document.getElementById('fRasmGaleriya').innerHTML='';document.getElementById('imgUploadStatus').textContent='';
@@ -4447,11 +4517,19 @@ async function saveTolov(){
     if(!validSumma(summa)){notify("To'g'ri summa kiriting");return;}
   }
   const t={id:genId('TOL'),obyektId,sana,summa,turi:document.getElementById('tTuri').value,izoh:document.getElementById('tIzoh').value,valyuta,summaValyuta,kurs};
+  const qOldin=obyektQoldiqHisobla(obyektId);
   const{error}=await sb.from('tolovlar').insert(tolToRow(t));
   if(error){notify('Saqlashda xato');console.error(error);return;}
   await refreshDB();closeModal('tolov');renderTolovlar();notify("To'lov saqlandi: "+fmt(summa));
   document.getElementById('tSumma').value='';document.getElementById('tIzoh').value='';
   document.getElementById('tSummaUsd').value='';document.getElementById('tKurs').value='';
+  {
+    const ob=DB.obyektlar.find(o=>o.id===obyektId);
+    const valyutaTxt=valyuta==='usd'?` ($${fmt(summaValyuta)} × ${fmt(kurs)})`:'';
+    notifyVisartEvent({type:'tolov_qilindi',obyektId,group:'moliya',entityTuri:'tolov',entityId:t.id,
+      matn:`Obyekt "${ob?ob.nom:obyektId}": to'lov qilindi — ${fmt(summa)} so'm${valyutaTxt}.`});
+    tekshirBalansOginish(obyektId,qOldin);
+  }
 }
 
 // ─── LOGIN GENERATOR ───
@@ -4583,6 +4661,11 @@ async function saveEditXarajat(){
   if(error){notify('Xato');console.error(error);return;}
   closeEditModal('xarajat');await refreshDB();renderXarajatlar();
   const f=x.jami-eski;notify(`Yangilandi${f!==0?` (${f>0?'+':''}${fmt(f)})`:''}`)
+  {
+    const ob=DB.obyektlar.find(o=>o.id===x.obyektId);
+    notifyVisartTuzatish('xarajat',x.id,'xarajat_qoshildi',
+      `Obyekt "${ob?ob.nom:x.obyektId}": xarajat tahrirlandi — ${x.mahsulot}, ${fmt(x.jami)} so'm.`);
+  }
 }
 function closeEditModal(t){document.getElementById('modalEdit'+t[0].toUpperCase()+t.slice(1)).classList.remove('on');}
 function openEditTolov(id){
@@ -4618,6 +4701,12 @@ async function saveEditTolov(){
   if(error){notify('Xato');console.error(error);return;}
   closeEditModal('tolov');await refreshDB();renderTolovlar();
   const f=summa-es;notify(`Yangilandi${f!==0?` (${f>0?'+':''}${fmt(f)})`:''}`)
+  {
+    const ob=DB.obyektlar.find(o=>o.id===t.obyektId);
+    const valyutaTxt=valyuta==='usd'?` ($${fmt(summaValyuta)} × ${fmt(kurs)})`:'';
+    notifyVisartTuzatish('tolov',t.id,'tolov_qilindi',
+      `Obyekt "${ob?ob.nom:t.obyektId}": to'lov tahrirlandi — ${fmt(summa)} so'm${valyutaTxt}.`);
+  }
 }
 
 // ─── PROFIL ───
