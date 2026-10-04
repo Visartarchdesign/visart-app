@@ -963,7 +963,7 @@ textarea.inp{resize:vertical;min-height:80px}
   <div class="ms">
     <div class="ms-hd"><div class="handle"></div><div class="ms-t">To'lov Kiritish</div></div>
     <div class="ms-body">
-      <div class="fg"><label class="fl">Obyekt</label><select class="inp" id="tObyekt"></select></div>
+      <div class="fg"><label class="fl">Obyekt <span style="color:var(--err)">*</span></label><select class="inp" id="tObyekt" style="border:2px solid var(--gold-d);font-weight:700"></select></div>
       <div class="fr">
         <div class="fg"><label class="fl">Sana</label><input class="inp" type="date" id="tSana"></div>
         <div class="fg"><label class="fl">To'lov turi</label><select class="inp" id="tTuri"><option>Naqd</option><option>Plastik karta</option><option>Bank o'tkazmasi</option></select></div>
@@ -981,7 +981,7 @@ textarea.inp{resize:vertical;min-height:80px}
     <div class="ms-hd"><div class="handle"></div><div class="ms-t">Yangi Buyurtma</div></div>
     <div class="ms-body">
       <div class="info-box"><i class="ico"><svg><use href="#ic-box"/></svg></i> Eshik, deraza, mebel kabi oldindan buyurtma qilinadigan mahsulotlar uchun. Umumiy narx va avansni kiriting — qolgan to'lov avtomatik hisoblanadi.</div>
-      <div class="fg"><label class="fl">Obyekt</label><select class="inp" id="zObyekt"></select></div>
+      <div class="fg"><label class="fl">Obyekt <span style="color:var(--err)">*</span></label><select class="inp" id="zObyekt" style="border:2px solid var(--gold-d);font-weight:700"></select></div>
       <div class="fg"><label class="fl">Buyurtma nomi</label><input class="inp" type="text" id="zNomi" placeholder="Kirish eshigi (massiv yog'och)"></div>
       <div class="fr">
         <div class="fg"><label class="fl">Turi</label><select class="inp" id="zTuri"><option>Eshik</option><option>Deraza</option><option>Mebel</option><option>Metall konstruksiya</option><option>Boshqa</option></select></div>
@@ -3082,13 +3082,15 @@ function renderZakaz(){
 function calcZakazQoldiq(){const u=parseFloat(document.getElementById('zUmumiy').value)||0,a=parseFloat(document.getElementById('zAvans').value)||0;document.getElementById('zQoldiq').value=fmt(Math.max(0,u-a));}
 function calcEditZakazQoldiq(){const u=parseFloat(document.getElementById('ezUmumiy').value)||0,a=parseFloat(document.getElementById('ezAvans').value)||0;document.getElementById('ezQoldiq').value=fmt(Math.max(0,u-a));}
 async function saveZakaz(){
+  const obyektId=document.getElementById('zObyekt').value;
+  if(!obyektId){notify("Obyektni tanlang");return;}
   const nomi=document.getElementById('zNomi').value.trim();
   const umumiy=money(parseFloat(document.getElementById('zUmumiy').value));
   const avans=money(parseFloat(document.getElementById('zAvans').value)||0);
   if(!nomi){notify('Buyurtma nomini kiriting');return;}
   if(!validSumma(umumiy)){notify('Umumiy narxni kiriting');return;}
   if(avans<0||avans>umumiy){notify('Avans 0 va umumiy narx orasida bo\'lsin');return;}
-  const z={id:genId('ZAK'),obyektId:document.getElementById('zObyekt').value,nomi,turi:document.getElementById('zTuri').value,taminotchi:document.getElementById('zTaminotchi').value.trim(),umumiy,avans,sana:document.getElementById('zSana').value||today(),tayyorSana:document.getElementById('zTayyorSana').value,holat:document.getElementById('zHolat').value,izoh:document.getElementById('zIzoh').value};
+  const z={id:genId('ZAK'),obyektId,nomi,turi:document.getElementById('zTuri').value,taminotchi:document.getElementById('zTaminotchi').value.trim(),umumiy,avans,sana:document.getElementById('zSana').value||today(),tayyorSana:document.getElementById('zTayyorSana').value,holat:document.getElementById('zHolat').value,izoh:document.getElementById('zIzoh').value};
   const{error}=await sb.from('zakazlar').insert(zakToRow(z));
   if(error){notify('Saqlashda xato');console.error(error);return;}
   await refreshDB();closeModal('zakaz');renderZakaz();notify('Buyurtma qo\'shildi');
@@ -4025,8 +4027,19 @@ function openModal(type){
     document.getElementById('fKategoriya').value='';
     updateSubkat();calcJami();document.getElementById('fRasmUrl').value='';document.getElementById('fRasmlarQoshimcha').value='[]';document.getElementById('fRasmGaleriya').innerHTML='';document.getElementById('imgUploadStatus').textContent='';document.getElementById('modalXarajat').classList.add('on');
   }
-  else if(type==='tolov'){const obs=getObs();document.getElementById('tObyekt').innerHTML=obs.map(o=>`<option value="${o.id}">${esc(o.nom)}</option>`).join('');document.getElementById('tSana').value=today();document.getElementById('modalTolov').classList.add('on');}
-  else if(type==='zakaz'){const obs=getObs();document.getElementById('zObyekt').innerHTML=obs.map(o=>`<option value="${o.id}">${esc(o.nom)}</option>`).join('');document.getElementById('zSana').value=today();document.getElementById('zQoldiq').value='';document.getElementById('modalZakaz').classList.add('on');}
+  else if(type==='tolov'){
+    // Obyekt har safar bo'sh boshlanadi — avvalgi tanlov eslab qolinmaydi (adashib boshqa obyektga to'lov yozib qo'yish xavfining oldini olish)
+    const obs=getObs();
+    document.getElementById('tObyekt').innerHTML='<option value="">— Obyektni tanlang —</option>'+obs.map(o=>`<option value="${o.id}">${esc(o.nom)}</option>`).join('');
+    document.getElementById('tObyekt').value='';
+    document.getElementById('tSana').value=today();document.getElementById('modalTolov').classList.add('on');
+  }
+  else if(type==='zakaz'){
+    const obs=getObs();
+    document.getElementById('zObyekt').innerHTML='<option value="">— Obyektni tanlang —</option>'+obs.map(o=>`<option value="${o.id}">${esc(o.nom)}</option>`).join('');
+    document.getElementById('zObyekt').value='';
+    document.getElementById('zSana').value=today();document.getElementById('zQoldiq').value='';document.getElementById('modalZakaz').classList.add('on');
+  }
   else if(type==='obyekt'){document.getElementById('oSana').value=today();document.getElementById('oMijozLogin').value='';document.getElementById('mijozKirishXabar').style.display='none';genParol();document.getElementById('modalObyekt').classList.add('on');}
 }
 function closeModal(t){document.getElementById('modal'+t[0].toUpperCase()+t.slice(1)).classList.remove('on');}
@@ -4202,11 +4215,13 @@ async function saveXarajat(){
   switchBoshqaTolovMode('toliq');
 }
 async function saveTolov(){
+  const obyektId=document.getElementById('tObyekt').value;
+  if(!obyektId){notify("Obyektni tanlang");return;}
   const summa=money(parseFloat(document.getElementById('tSumma').value));
   const sana=document.getElementById('tSana').value;
   if(!validSumma(summa)){notify("To'g'ri summa kiriting");return;}
   if(!validSana(sana)){notify("Sana noto'g'ri (kelajak sanasi bo'lishi mumkin emas)");return;}
-  const t={id:genId('TOL'),obyektId:document.getElementById('tObyekt').value,sana,summa,turi:document.getElementById('tTuri').value,izoh:document.getElementById('tIzoh').value};
+  const t={id:genId('TOL'),obyektId,sana,summa,turi:document.getElementById('tTuri').value,izoh:document.getElementById('tIzoh').value};
   const{error}=await sb.from('tolovlar').insert(tolToRow(t));
   if(error){notify('Saqlashda xato');console.error(error);return;}
   await refreshDB();closeModal('tolov');renderTolovlar();notify("To'lov saqlandi: "+fmt(summa));
