@@ -890,13 +890,15 @@ textarea.inp{resize:vertical;min-height:80px}
 <!-- MODAL: XARAJAT -->
 <div class="mo" id="modalXarajat" role="dialog" aria-modal="true">
   <div class="ms">
-    <div class="ms-hd"><div class="handle"></div><div class="ms-t">Yangi Xarajat</div></div>
-    <div class="ms-body">
-      <div class="fg"><label class="fl">Obyekt</label><select class="inp" id="fObyekt" onchange="updateSubkat()"></select></div>
-      <div class="fr">
+    <div class="ms-hd">
+      <div class="handle"></div><div class="ms-t">Yangi Xarajat</div>
+      <div class="fg" style="margin-top:10px;margin-bottom:0"><label class="fl">Obyekt</label><select class="inp" id="fObyekt" onchange="updateSubkat()" style="border:2px solid var(--gold-d);font-weight:700"></select></div>
+      <div class="fr" style="margin-top:10px;margin-bottom:0">
         <div class="fg"><label class="fl">Kategoriya</label><select class="inp" id="fKategoriya" onchange="updateSubkat()"><option>Qurilish mollari</option><option>Boshqa xarajatlar</option></select></div>
         <div class="fg"><label class="fl">Sub-kategoriya</label><select class="inp" id="fSubkat"></select></div>
       </div>
+    </div>
+    <div class="ms-body">
       <div class="fg" id="fMollariWrap">
         <label class="fl">Mahsulot / Xizmat nomi</label>
         <div style="position:relative">
