@@ -1,117 +1,198 @@
-// ═══════════════════════════════════════════════════════════════
-// VISART — notify-visart-event Edge Function
-// Vazifa: muhim hodisalar (xarajat qo'shildi, to'lov qilindi,
-// obyekt muzlatildi va h.k.) yuz berganda https://visartdesign.uz
-// tarafidagi Telegram integratsiyasiga xabar yuboradi.
+// Supabase Edge Function — notify-visart-event (v2)
+// Kontrakt "Visart Moliya ilovasi" (visartdesign.uz) tomoni bilan kelishilgan:
+// bitta chaqiruv ichida moliya (ichki, to'liq) VA obyekt (mijoz, qisqa) matnlari
+// ikkalasi ham yuboriladi, tuzatish ham shu funksiya orqali amalga oshadi.
 //
-// MUHIM: maxfiy kalit (X-Visart-Secret) faqat shu yerda, server
-// tomonida ishlatiladi — frontendga HECH QACHON yuborilmaydi.
+// MUHIM (xavfsizlik — bu versiya "Moliya ilovasi" bergan namunaga nisbatan
+// QO'SHIMCHA ravishda ikkita tekshiruv bilan mustahkamlangan):
+//   1) Faqat haqiqiy PRORAB (tizimga kirgan, prorablar jadvalida bor foydalanuvchi)
+//      bu funksiyani chaqira oladi — mijoz yoki autentifikatsiyasiz so'rov rad etiladi.
+//      (Original namunada bu tekshiruv yo'q edi — har qanday login qilgan foydalanuvchi,
+//      hatto mijoz akkounti ham, soxta hodisa — masalan soxta "to'lov qilindi" yoki
+//      soxta "obyekt muzlatildi" — yuborib, Telegram guruhlariga yolg'on xabar
+//      tushirishi mumkin edi.)
+//   2) Agar so'rovda obyekt_id berilgan bo'lsa, u aynan CHAQIRUVCHI PRORABNING
+//      O'Z KOMPANIYASIGA tegishli obyekt ekanligi tekshiriladi — aks holda
+//      boshqa kompaniya nomidan/obyekti bo'yicha xabar yuborib bo'lmaydi
+//      (ko'p-tenant izolyatsiyasini saqlab qolish uchun).
 //
-// Deploy: Supabase Dashboard → Edge Functions → Deploy new function
-//         (nomi aniq: notify-visart-event) → shu faylni joylashtiring
-// Secret: Edge Functions → Secrets → VISART_EVENTS_SECRET
-// ═══════════════════════════════════════════════════════════════
-import { createClient } from "npm:@supabase/supabase-js@2.49.4";
+// Deploy: Supabase Dashboard → Edge Functions → notify-visart-event → Code → shu faylni joylashtiring → Deploy
+// Secret: Edge Functions → Secrets → VISART_EVENTS_SECRET = <Moliya ilovasi bergan qiymat>
+//
+// Chaqirish (frontenddan, saqlash muvaffaqiyatli bo'lgandan keyin):
+//   await supabase.functions.invoke('notify-visart-event', { body: {...} })
+//
+// Body (yangi hodisa):
+// {
+//   entity_turi: "xarajat" | "tolov" | "zakaz" | "obyekt" | ...,
+//   entity_id: "<shu yozuvning o'z jadvalidagi id'si>",
+//   hodisa_turi: "xarajat_qoshildi" | "tolov_qilindi" | "obyekt_muzlatildi" | ...,
+//   obyekt_id: "<obyektlar.id>" | null,
+//   matn_moliya: "<ichki, to'liq matn — MAJBURIY>",
+//   matn_mijoz: "<mijozga ko'rsatiladigan qisqa matn>" | null,
+//   urgent: boolean,
+// }
+//
+// Body (tuzatish):
+// {
+//   entity_turi, entity_id, hodisa_turi,
+//   tuzatish: true,
+//   matn_moliya: "<yangilangan to'liq matn>",
+//   matn_mijoz: "<yangilangan qisqa matn>" | null,
+// }
+
+import { createClient } from "jsr:@supabase/supabase-js@2";
+
+const VISART_EVENTS_URL = "https://visartdesign.uz/api/visart-events";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-const j = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
-const err = (msg: string, status = 400) => j({ ok: false, error: msg }, status);
 
-const EVENTS_URL = "https://visartdesign.uz/api/visart-events";
+function json(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" },
+  });
+}
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-
-  const admin = createClient(
+function sbAdmin() {
+  return createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
+}
 
-  // Faqat prorab (xarajat/to'lov yoza oladigan rol) chaqira oladi
+async function sendToVisart(payload: Record<string, unknown>) {
+  const res = await fetch(VISART_EVENTS_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Visart-Secret": Deno.env.get("VISART_EVENTS_SECRET") ?? "",
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10000),
+  });
+  const data = await res.json().catch(() => null);
+  return { ok: res.ok, status: res.status, data };
+}
+
+async function topilganHodisalar(sb: ReturnType<typeof sbAdmin>, entity_turi: string, entity_id: string, hodisa_turi: string) {
+  const { data, error } = await sb
+    .from("tashqi_hodisalar")
+    .select("guruh, hodisa_id")
+    .eq("entity_turi", entity_turi)
+    .eq("entity_id", entity_id)
+    .eq("hodisa_turi", hodisa_turi);
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function saqlaHodisaId(sb: ReturnType<typeof sbAdmin>, row: {
+  entity_turi: string; entity_id: string; hodisa_turi: string; guruh: string; hodisa_id: number;
+}) {
+  const { error } = await sb.from("tashqi_hodisalar").upsert(row, {
+    onConflict: "entity_turi,entity_id,hodisa_turi,guruh",
+  });
+  if (error) throw error;
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405);
+
+  const sb = sbAdmin();
+
+  // ── FAQAT PRORAB chaqira oladi ──
   const jwt = (req.headers.get("Authorization") || "").replace("Bearer ", "");
-  const { data: { user: caller } } = await admin.auth.getUser(jwt);
-  if (!caller) return err("Avtorizatsiya kerak", 401);
-  const { data: pr } = await admin.from("prorablar").select("login, kompaniya_id").eq("user_id", caller.id).maybeSingle();
-  if (!pr) return err("Ruxsat yo'q", 403);
+  const { data: { user: caller } } = await sb.auth.getUser(jwt);
+  if (!caller) return json({ ok: false, error: "unauthorized" }, 401);
+  const { data: pr } = await sb.from("prorablar").select("login, kompaniya_id").eq("user_id", caller.id).maybeSingle();
+  if (!pr) return json({ ok: false, error: "forbidden" }, 403);
 
-  const SECRET = Deno.env.get("VISART_EVENTS_SECRET");
-  if (!SECRET) return err("Server sozlanmagan: VISART_EVENTS_SECRET sozlanmagan (Edge Functions → Secrets)", 500);
-
-  let payload: Record<string, unknown> = {};
+  let body: Record<string, any>;
   try {
-    payload = await req.json();
+    body = await req.json();
   } catch {
-    return err("Noto'g'ri so'rov");
+    return json({ ok: false, error: "invalid_json" }, 400);
   }
 
-  const entityTuri = payload.entity_turi as string;
-  const entityId = payload.entity_id as string;
-  const hodisaTuri = payload.hodisa_turi as string;
-  const matn = payload.matn as string;
-  if (!entityTuri || !entityId || !hodisaTuri || !matn) {
-    return err("entity_turi, entity_id, hodisa_turi va matn majburiy");
+  const { entity_turi, entity_id, hodisa_turi } = body;
+  if (!entity_turi || !entity_id || !hodisa_turi) {
+    return json({ ok: false, error: "entity_turi/entity_id/hodisa_turi majburiy" }, 400);
+  }
+
+  // ── Ko'p-tenant xavfsizlik: obyekt_id chaqiruvchining o'z kompaniyasiga tegishli bo'lishi shart ──
+  if (body.obyekt_id) {
+    const { data: ob } = await sb.from("obyektlar").select("id, kompaniya_id").eq("id", body.obyekt_id).maybeSingle();
+    if (!ob || ob.kompaniya_id !== pr.kompaniya_id) {
+      return json({ ok: false, error: "obyekt_topilmadi_yoki_ruxsat_yoq" }, 403);
+    }
   }
 
   try {
-    if (payload.tuzatish) {
-      // ── TUZATISH: avval yuborilgan hodisaning matnini yangilaymiz ──
-      const { data: row } = await admin
-        .from("tashqi_hodisalar")
-        .select("hodisa_id")
-        .eq("entity_turi", entityTuri).eq("entity_id", entityId).eq("hodisa_turi", hodisaTuri)
-        .maybeSingle();
-      if (!row || row.hodisa_id == null) {
-        // Hali hech qachon yuborilmagan — tuzatadigan narsa yo'q, bu xato emas
-        return j({ ok: true, tahrir: "hodisa_topilmadi" });
+    // ─── TUZATISH ───
+    if (body.tuzatish) {
+      let topilgan;
+      try {
+        topilgan = await topilganHodisalar(sb, entity_turi, entity_id, hodisa_turi);
+      } catch (e) {
+        return json({ ok: false, error: "tashqi_hodisalar_xato", detail: String(e) }, 500);
       }
-      const res = await fetch(EVENTS_URL, {
-        method: "POST",
-        headers: { "content-type": "application/json", "X-Visart-Secret": SECRET },
-        body: JSON.stringify({ tuzatish_hodisa_id: row.hodisa_id, matn }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data?.ok === false) {
-        console.error("tuzatish error", data);
-        return err("Tuzatish yuborishda xato: " + (data?.error || res.status));
+      if (!topilgan.length) {
+        return json({ ok: false, error: "avvalgi_hodisa_topilmadi" }, 404);
       }
-      await admin.from("tashqi_hodisalar")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("entity_turi", entityTuri).eq("entity_id", entityId).eq("hodisa_turi", hodisaTuri);
-      return j({ ok: true, tahrir: data.tahrir || "yangilandi" });
+      const natijalar: Record<string, unknown> = {};
+      for (const row of topilgan) {
+        const matn = row.guruh === "moliya" ? body.matn_moliya : body.matn_mijoz;
+        if (!matn) continue;
+        const r = await sendToVisart({ tuzatish_hodisa_id: row.hodisa_id, matn });
+        natijalar[row.guruh] = r.data;
+      }
+      return json({ ok: true, tuzatildi: natijalar });
     }
 
-    // ── YANGI HODISA ──
-    const group = (payload.group as string) || "moliya";
-    const urgent = !!payload.urgent;
-    const obyektId = payload.obyekt_id as string | undefined;
-    const body: Record<string, unknown> = { type: hodisaTuri, matn, group, urgent };
-    if (obyektId) body.obyekt_id = obyektId;
+    // ─── YANGI HODISA ───
+    if (!body.matn_moliya) return json({ ok: false, error: "matn_moliya majburiy" }, 400);
 
-    const res = await fetch(EVENTS_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json", "X-Visart-Secret": SECRET },
-      body: JSON.stringify(body),
+    const natijalar: Record<string, unknown> = {};
+
+    const moliyaJavob = await sendToVisart({
+      type: hodisa_turi,
+      matn: body.matn_moliya,
+      group: "moliya",
+      obyekt_id: body.obyekt_id ?? undefined,
+      urgent: !!body.urgent,
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || data?.ok === false) {
-      console.error("notify error", data);
-      return err("Xabar yuborishda xato: " + (data?.error || res.status));
+    natijalar.moliya = moliyaJavob.data;
+    if (moliyaJavob.ok && moliyaJavob.data?.hodisa_id) {
+      await saqlaHodisaId(sb, {
+        entity_turi, entity_id, hodisa_turi, guruh: "moliya",
+        hodisa_id: moliyaJavob.data.hodisa_id,
+      });
     }
-    // hodisa_id kelsa (navbatga yozilgan bo'lsa) — keyingi TUZATISH uchun saqlab qo'yamiz
-    if (data.hodisa_id != null) {
-      await admin.from("tashqi_hodisalar").upsert({
-        entity_turi: entityTuri, entity_id: entityId, hodisa_turi: hodisaTuri,
-        hodisa_id: data.hodisa_id, kompaniya_id: pr.kompaniya_id,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "entity_turi,entity_id,hodisa_turi" });
+
+    if (body.matn_mijoz && body.obyekt_id) {
+      const obyektJavob = await sendToVisart({
+        type: hodisa_turi,
+        matn: body.matn_mijoz,
+        group: "obyekt",
+        obyekt_id: body.obyekt_id,
+        urgent: !!body.urgent,
+      });
+      natijalar.obyekt = obyektJavob.data;
+      if (obyektJavob.ok && obyektJavob.data?.hodisa_id) {
+        await saqlaHodisaId(sb, {
+          entity_turi, entity_id, hodisa_turi, guruh: "obyekt",
+          hodisa_id: obyektJavob.data.hodisa_id,
+        });
+      }
     }
-    return j({ ok: true, hodisa_id: data.hodisa_id ?? null });
+
+    return json({ ok: true, natijalar });
   } catch (e) {
     console.error(e);
-    return err("Server xatosi", 500);
+    return json({ ok: false, error: "server_xatosi", detail: String(e) }, 500);
   }
 });

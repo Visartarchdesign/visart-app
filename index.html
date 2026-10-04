@@ -1621,37 +1621,26 @@ function calcEditTolKurs(){
 // opts: {type, obyektId, matnMoliya, matnMijoz(ixtiyoriy — berilsa mijoz obyekt guruhiga ham qisqa/narxsiz matn ketadi), urgent, entityTuri, entityId}
 // Ba'zi hodisalar (to'lov, avans, muzlatish) HAM ichki moliya guruhiga, HAM mijozning o'z obyekt guruhiga
 // (qisqa, narx/marja/ta'minotchisiz matn bilan) yuboriladi — ikkalasi alohida hodisa_id bilan kuzatiladi.
+// "Moliya ilovasi" bilan kelishilgan yakuniy kontrakt: BITTA chaqiruvda
+// ham moliya (ichki, to'liq), ham mijoz (obyekt guruhi, qisqa) matni
+// yuboriladi — ikkalaga ham yoki faqat moliyaga yuborishni Edge Function
+// o'zi hal qiladi (matnMijoz yo'q bo'lsa — faqat moliyaga ketadi).
 async function notifyVisartEvent(opts){
   try{
     await sb.functions.invoke('notify-visart-event',{body:{
-      hodisa_turi:opts.type,obyekt_id:opts.obyektId,matn:opts.matnMoliya,
-      group:'moliya',urgent:!!opts.urgent,
-      entity_turi:opts.entityTuri,entity_id:opts.entityId+'-moliya'
+      entity_turi:opts.entityTuri,entity_id:opts.entityId,hodisa_turi:opts.type,
+      obyekt_id:opts.obyektId,matn_moliya:opts.matnMoliya,matn_mijoz:opts.matnMijoz||null,
+      urgent:!!opts.urgent
     }});
-  }catch(e){console.warn('notifyVisartEvent(moliya) xato (e\'tiborsiz qoldirildi)',e);}
-  if(opts.matnMijoz){
-    try{
-      await sb.functions.invoke('notify-visart-event',{body:{
-        hodisa_turi:opts.type,obyekt_id:opts.obyektId,matn:opts.matnMijoz,
-        group:'obyekt',urgent:!!opts.urgent,
-        entity_turi:opts.entityTuri,entity_id:opts.entityId+'-mijoz'
-      }});
-    }catch(e){console.warn('notifyVisartEvent(mijoz) xato (e\'tiborsiz qoldirildi)',e);}
-  }
+  }catch(e){console.warn('notifyVisartEvent xato (e\'tiborsiz qoldirildi)',e);}
 }
 async function notifyVisartTuzatish(entityTuri,entityId,hodisaTuri,matnMoliya,matnMijoz){
   try{
     await sb.functions.invoke('notify-visart-event',{body:{
-      tuzatish:true,entity_turi:entityTuri,entity_id:entityId+'-moliya',hodisa_turi:hodisaTuri,matn:matnMoliya
+      entity_turi:entityTuri,entity_id:entityId,hodisa_turi:hodisaTuri,
+      tuzatish:true,matn_moliya:matnMoliya,matn_mijoz:matnMijoz||null
     }});
-  }catch(e){console.warn('notifyVisartTuzatish(moliya) xato (e\'tiborsiz qoldirildi)',e);}
-  if(matnMijoz){
-    try{
-      await sb.functions.invoke('notify-visart-event',{body:{
-        tuzatish:true,entity_turi:entityTuri,entity_id:entityId+'-mijoz',hodisa_turi:hodisaTuri,matn:matnMijoz
-      }});
-    }catch(e){console.warn('notifyVisartTuzatish(mijoz) xato (e\'tiborsiz qoldirildi)',e);}
-  }
+  }catch(e){console.warn('notifyVisartTuzatish xato (e\'tiborsiz qoldirildi)',e);}
 }
 // Obyektning joriy qoldig'ini (mijoz to'lovi - xarajat - mualliflik nazorati olingan) hisoblaydi.
 // renderKassa()dagi "q" formulasi bilan bir xil — balans nolga/minusga o'tishini kuzatish uchun.
