@@ -892,10 +892,10 @@ textarea.inp{resize:vertical;min-height:80px}
   <div class="ms">
     <div class="ms-hd">
       <div class="handle"></div><div class="ms-t">Yangi Xarajat</div>
-      <div class="fg" style="margin-top:10px;margin-bottom:0"><label class="fl">Obyekt</label><select class="inp" id="fObyekt" onchange="updateSubkat()" style="border:2px solid var(--gold-d);font-weight:700"></select></div>
+      <div class="fg" style="margin-top:10px;margin-bottom:0"><label class="fl">Obyekt <span style="color:var(--err)">*</span></label><select class="inp" id="fObyekt" onchange="updateSubkat()" style="border:2px solid var(--gold-d);font-weight:700"></select></div>
       <div class="fr" style="margin-top:10px;margin-bottom:0">
-        <div class="fg"><label class="fl">Kategoriya</label><select class="inp" id="fKategoriya" onchange="updateSubkat()"><option>Qurilish mollari</option><option>Boshqa xarajatlar</option></select></div>
-        <div class="fg"><label class="fl">Sub-kategoriya</label><select class="inp" id="fSubkat"></select></div>
+        <div class="fg"><label class="fl">Kategoriya <span style="color:var(--err)">*</span></label><select class="inp" id="fKategoriya" onchange="updateSubkat()"><option value="">— Tanlang —</option><option>Qurilish mollari</option><option>Boshqa xarajatlar</option></select></div>
+        <div class="fg"><label class="fl">Sub-kategoriya <span style="color:var(--err)">*</span></label><select class="inp" id="fSubkat"><option value="">— Tanlang —</option></select></div>
       </div>
     </div>
     <div class="ms-body">
@@ -4015,7 +4015,16 @@ function openWhatsApp(){window.open('https://wa.me/?text='+encodeURIComponent(do
 
 // ─── MODALS ───
 function openModal(type){
-  if(type==='xarajat'){const obs=getObs();document.getElementById('fObyekt').innerHTML=obs.map(o=>`<option value="${o.id}">${esc(o.nom)}</option>`).join('');updateSubkat();calcJami();document.getElementById('fRasmUrl').value='';document.getElementById('fRasmlarQoshimcha').value='[]';document.getElementById('fRasmGaleriya').innerHTML='';document.getElementById('imgUploadStatus').textContent='';document.getElementById('modalXarajat').classList.add('on');}
+  if(type==='xarajat'){
+    const obs=getObs();
+    // MUHIM: har safar oyna ochilganda Obyekt/Kategoriya/Sub-kategoriya BO'SH holatda boshlanadi —
+    // avvalgi tanlov eslab qolinmaydi, shunda prorab har safar ongli ravishda qaysi obyektga
+    // xarajat kiritayotganini tekshirib, o'zi qayta tanlashga majbur bo'ladi (adashib ketish xavfini yo'qotadi).
+    document.getElementById('fObyekt').innerHTML='<option value="">— Obyektni tanlang —</option>'+obs.map(o=>`<option value="${o.id}">${esc(o.nom)}</option>`).join('');
+    document.getElementById('fObyekt').value='';
+    document.getElementById('fKategoriya').value='';
+    updateSubkat();calcJami();document.getElementById('fRasmUrl').value='';document.getElementById('fRasmlarQoshimcha').value='[]';document.getElementById('fRasmGaleriya').innerHTML='';document.getElementById('imgUploadStatus').textContent='';document.getElementById('modalXarajat').classList.add('on');
+  }
   else if(type==='tolov'){const obs=getObs();document.getElementById('tObyekt').innerHTML=obs.map(o=>`<option value="${o.id}">${esc(o.nom)}</option>`).join('');document.getElementById('tSana').value=today();document.getElementById('modalTolov').classList.add('on');}
   else if(type==='zakaz'){const obs=getObs();document.getElementById('zObyekt').innerHTML=obs.map(o=>`<option value="${o.id}">${esc(o.nom)}</option>`).join('');document.getElementById('zSana').value=today();document.getElementById('zQoldiq').value='';document.getElementById('modalZakaz').classList.add('on');}
   else if(type==='obyekt'){document.getElementById('oSana').value=today();document.getElementById('oMijozLogin').value='';document.getElementById('mijozKirishXabar').style.display='none';genParol();document.getElementById('modalObyekt').classList.add('on');}
@@ -4026,8 +4035,16 @@ function updateSubkat(){
   const obId=document.getElementById('fObyekt').value;
   const ob=DB.obyektlar.find(o=>o.id===obId);
   const obyektTuri=ob?ob.obyektTuri:'ikki';
+  if(!k){
+    // Kategoriya hali tanlanmagan — hech narsa taxmin qilinmaydi, foydalanuvchi o'zi tanlashi shart
+    document.getElementById('fSubkat').innerHTML='<option value="">— Tanlang —</option>';
+    document.getElementById('fMollariWrap').style.display='none';
+    document.getElementById('fMollariFields').style.display='none';
+    document.getElementById('fBoshqaWrap').style.display='none';
+    return;
+  }
   const list=subkatsForObyektTuri(k,obyektTuri);
-  document.getElementById('fSubkat').innerHTML=list.map(s=>`<option>${esc(s)}</option>`).join('');
+  document.getElementById('fSubkat').innerHTML='<option value="">— Tanlang —</option>'+list.map(s=>`<option>${esc(s)}</option>`).join('');
   fillBirlikSelect('fBirlik',k);
   toggleUstaBosqichUI(k,'fUstaBosqichWrap','fUstaBosqich','fIzoh');
   const isBoshqa=k==='Boshqa xarajatlar';
@@ -4148,6 +4165,11 @@ async function saveXarajat(){
   const subkat=document.getElementById('fSubkat').value;
   const obyektId=document.getElementById('fObyekt').value;
   const izoh=document.getElementById('fIzoh').value;
+  // Majburiy tanlov: adashib boshqa obyekt/kategoriyaga xarajat qo'shib yuborilishining oldini olish uchun
+  // bu uchta maydon hech qachon oldindan belgilanmagan — har safar ongli ravishda tanlanishi shart.
+  if(!obyektId){notify("Obyektni tanlang");return;}
+  if(!kat){notify("Kategoriyani tanlang");return;}
+  if(!subkat){notify("Sub-kategoriyani tanlang");return;}
   const rasmlarQoshimcha=document.getElementById('fRasmlarQoshimcha').value||'[]';
   const rasmUrl=document.getElementById('fRasmUrl').value||null;
   let x;
