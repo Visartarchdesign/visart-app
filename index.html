@@ -1618,21 +1618,40 @@ function calcEditTolKurs(){
 // amalini to'xtatmasligi yoki buzmasligi kerak — shuning uchun
 // chaqiruvchi tomonda HECH QACHON await qilinmaydi va xato bo'lsa
 // ham jim yutiladi.
+// opts: {type, obyektId, matnMoliya, matnMijoz(ixtiyoriy — berilsa mijoz obyekt guruhiga ham qisqa/narxsiz matn ketadi), urgent, entityTuri, entityId}
+// Ba'zi hodisalar (to'lov, avans, muzlatish) HAM ichki moliya guruhiga, HAM mijozning o'z obyekt guruhiga
+// (qisqa, narx/marja/ta'minotchisiz matn bilan) yuboriladi — ikkalasi alohida hodisa_id bilan kuzatiladi.
 async function notifyVisartEvent(opts){
   try{
     await sb.functions.invoke('notify-visart-event',{body:{
-      hodisa_turi:opts.type,obyekt_id:opts.obyektId,matn:opts.matn,
-      group:opts.group||'moliya',urgent:!!opts.urgent,
-      entity_turi:opts.entityTuri,entity_id:opts.entityId
+      hodisa_turi:opts.type,obyekt_id:opts.obyektId,matn:opts.matnMoliya,
+      group:'moliya',urgent:!!opts.urgent,
+      entity_turi:opts.entityTuri,entity_id:opts.entityId+'-moliya'
     }});
-  }catch(e){console.warn('notifyVisartEvent xato (e\'tiborsiz qoldirildi)',e);}
+  }catch(e){console.warn('notifyVisartEvent(moliya) xato (e\'tiborsiz qoldirildi)',e);}
+  if(opts.matnMijoz){
+    try{
+      await sb.functions.invoke('notify-visart-event',{body:{
+        hodisa_turi:opts.type,obyekt_id:opts.obyektId,matn:opts.matnMijoz,
+        group:'obyekt',urgent:!!opts.urgent,
+        entity_turi:opts.entityTuri,entity_id:opts.entityId+'-mijoz'
+      }});
+    }catch(e){console.warn('notifyVisartEvent(mijoz) xato (e\'tiborsiz qoldirildi)',e);}
+  }
 }
-async function notifyVisartTuzatish(entityTuri,entityId,hodisaTuri,matn){
+async function notifyVisartTuzatish(entityTuri,entityId,hodisaTuri,matnMoliya,matnMijoz){
   try{
     await sb.functions.invoke('notify-visart-event',{body:{
-      tuzatish:true,entity_turi:entityTuri,entity_id:entityId,hodisa_turi:hodisaTuri,matn
+      tuzatish:true,entity_turi:entityTuri,entity_id:entityId+'-moliya',hodisa_turi:hodisaTuri,matn:matnMoliya
     }});
-  }catch(e){console.warn('notifyVisartTuzatish xato (e\'tiborsiz qoldirildi)',e);}
+  }catch(e){console.warn('notifyVisartTuzatish(moliya) xato (e\'tiborsiz qoldirildi)',e);}
+  if(matnMijoz){
+    try{
+      await sb.functions.invoke('notify-visart-event',{body:{
+        tuzatish:true,entity_turi:entityTuri,entity_id:entityId+'-mijoz',hodisa_turi:hodisaTuri,matn:matnMijoz
+      }});
+    }catch(e){console.warn('notifyVisartTuzatish(mijoz) xato (e\'tiborsiz qoldirildi)',e);}
+  }
 }
 // Obyektning joriy qoldig'ini (mijoz to'lovi - xarajat - mualliflik nazorati olingan) hisoblaydi.
 // renderKassa()dagi "q" formulasi bilan bir xil — balans nolga/minusga o'tishini kuzatish uchun.
@@ -1660,9 +1679,10 @@ function tekshirBalansOginish(obyektId,qOldin){
   if(qOldin>0&&qYangi<=0){
     const ob=DB.obyektlar.find(o=>o.id===obyektId);
     notifyVisartEvent({
-      type:'obyekt_balansi_minusga_otdi',obyektId,group:'moliya',urgent:false,
+      type:'obyekt_balansi_minusga_otdi',obyektId,urgent:false,
       entityTuri:'obyekt_balans',entityId:obyektId+'-'+today(),
-      matn:`Obyekt "${ob?ob.nom:obyektId}": pul qoldig'i ${qYangi<0?'manfiyga':'nolga'} tushdi (qoldiq: ${fmt(qYangi)} so'm).`
+      matnMoliya:`Obyekt "${ob?ob.nom:obyektId}": pul qoldig'i ${qYangi<0?'manfiyga':'nolga'} tushdi (qoldiq: ${fmt(qYangi)} so'm).`
+      // faqat ichki moliya guruhiga — mijozga yuborilmaydi
     });
   }
 }
@@ -3238,10 +3258,16 @@ async function saveZakaz(){
   if(error){notify('Saqlashda xato');console.error(error);return;}
   await refreshDB();closeModal('zakaz');renderZakaz();notify('Buyurtma qo\'shildi');
   ['zNomi','zTaminotchi','zUmumiy','zAvans','zQoldiq','zTayyorSana','zIzoh'].forEach(id=>document.getElementById(id).value='');
-  if(avans>0){
-    const ob=DB.obyektlar.find(o=>o.id===obyektId);
-    notifyVisartEvent({type:'avans_qayd_etildi',obyektId,group:'moliya',entityTuri:'zakaz',entityId:z.id,
-      matn:`Obyekt "${ob?ob.nom:obyektId}": buyurtma avansi qayd etildi — ${nomi}, ${fmt(avans)} so'm.`});
+  {
+    const ob=DB.obyektlar.find(o=>o.id===obyektId),obNom=ob?ob.nom:obyektId;
+    notifyVisartEvent({type:'zakaz_yaratildi',obyektId,entityTuri:'zakaz',entityId:z.id,
+      matnMoliya:`Obyekt "${obNom}": yangi buyurtma yaratildi — ${nomi}${z.turi?' ('+z.turi+')':''}, umumiy narx ${fmt(umumiy)} so'm${z.taminotchi?', ta\'minotchi: '+z.taminotchi:''}.`,
+      matnMijoz:`Obyektingiz uchun ${nomi} buyurtma qilindi.`});
+    if(avans>0){
+      notifyVisartEvent({type:'avans_qayd_etildi',obyektId,entityTuri:'zakaz-avans',entityId:z.id,
+        matnMoliya:`Obyekt "${obNom}": buyurtma avansi qayd etildi — ${nomi}, ${fmt(avans)} so'm.`,
+        matnMijoz:`Buyurtmangiz (${nomi}) uchun avans qayd etildi — ${fmt(avans)} so'm.`});
+    }
   }
 }
 function openEditZakaz(id){
@@ -3267,10 +3293,17 @@ async function saveEditZakaz(){
   const umumiy=parseFloat(document.getElementById('ezUmumiy').value);
   if(!nomi||!umumiy){notify('Nom va narxni kiriting');return;}
   const idx=DB.zakazlar.findIndex(z=>z.id===id);if(idx===-1)return;
+  const eskiHolat=DB.zakazlar[idx].holat;
   const z={...DB.zakazlar[idx],obyektId:document.getElementById('ezObyekt').value,nomi,turi:document.getElementById('ezTuri').value,taminotchi:document.getElementById('ezTaminotchi').value.trim(),umumiy,avans:parseFloat(document.getElementById('ezAvans').value)||0,sana:document.getElementById('ezSana').value,tayyorSana:document.getElementById('ezTayyorSana').value,holat:document.getElementById('ezHolat').value,izoh:document.getElementById('ezIzoh').value};
   const{error}=await sb.from('zakazlar').update(zakToRow(z)).eq('id',id);
   if(error){notify('Xato');console.error(error);return;}
   await refreshDB();closeEditModal('zakaz');renderZakaz();notify('Buyurtma yangilandi');
+  if((z.holat==='Yetkazildi'||z.holat==='Ornatildi')&&eskiHolat!==z.holat&&eskiHolat!=='Yetkazildi'&&eskiHolat!=='Ornatildi'){
+    const ob=DB.obyektlar.find(o=>o.id===z.obyektId),obNom=ob?ob.nom:z.obyektId;
+    notifyVisartEvent({type:'zakaz_tayyor',obyektId:z.obyektId,entityTuri:'zakaz-tayyor',entityId:z.id,
+      matnMoliya:`Obyekt "${obNom}": buyurtma ${z.holat==='Ornatildi'?"o'rnatildi":'yetkazildi'} — ${z.nomi}.`,
+      matnMijoz:`Obyektingiz uchun ${z.nomi} ${z.holat==='Ornatildi'?"o'rnatildi":'yetkazib berildi'}.`});
+  }
 }
 async function deleteZakaz(id){
   const z=DB.zakazlar.find(v=>v.id===id);if(!z)return;
@@ -4141,8 +4174,9 @@ async function saveEditObyekt(){
   if(error){notify('Saqlashda xato');console.error(error);return;}
   await refreshDB();document.getElementById('modalEditObyekt').classList.remove('on');renderObyektlar();notify("Obyekt yangilandi");
   if(newHolat==='Muzlatilgan'&&oldOb.holat!=='Muzlatilgan'){
-    notifyVisartEvent({type:'obyekt_muzlatildi',obyektId:id,group:'moliya',urgent:true,entityTuri:'obyekt_muzlatish',entityId:id+'-'+today(),
-      matn:`Obyekt "${nom}": qurilish holati "Muzlatilgan"ga o'tkazildi.`});
+    notifyVisartEvent({type:'obyekt_muzlatildi',obyektId:id,urgent:true,entityTuri:'obyekt_muzlatish',entityId:id+'-'+today(),
+      matnMoliya:`Obyekt "${nom}": qurilish holati "Muzlatilgan"ga o'tkazildi.`,
+      matnMijoz:`Diqqat: obyektingiz ("${nom}") bo'yicha pul mablag'i tugagani sababli qurilish jarayoni vaqtincha to'xtatildi.`});
   }
 }
 
@@ -4490,8 +4524,9 @@ async function saveXarajat(){
   await refreshDB();closeModal('xarajat');renderXarajatlar();notify('Xarajat saqlandi: '+fmt(x.jami));
   {
     const ob=DB.obyektlar.find(o=>o.id===obyektId);
-    notifyVisartEvent({type:'xarajat_qoshildi',obyektId,group:'moliya',entityTuri:'xarajat',entityId:x.id,
-      matn:`Obyekt "${ob?ob.nom:obyektId}": xarajat qo'shildi — ${x.mahsulot}, ${fmt(x.jami)} so'm.`});
+    notifyVisartEvent({type:'xarajat_qoshildi',obyektId,entityTuri:'xarajat',entityId:x.id,
+      matnMoliya:`Obyekt "${ob?ob.nom:obyektId}": xarajat qo'shildi — ${x.mahsulot}, ${fmt(x.jami)} so'm.`});
+      // mijozga yuborilmaydi — ichki xarajat/marja oshkor bo'lmasin
     tekshirBalansOginish(obyektId,qOldin);
   }
   ['fMahsulot','fNarx','fMiqdor','fJami','fIzoh','fRasmUrl','fBoshqaUmumiy','fBoshqaKelishilgan','fBoshqaAvans','fBoshqaQoldiq'].forEach(id=>document.getElementById(id).value='');
@@ -4526,8 +4561,9 @@ async function saveTolov(){
   {
     const ob=DB.obyektlar.find(o=>o.id===obyektId);
     const valyutaTxt=valyuta==='usd'?` ($${fmt(summaValyuta)} × ${fmt(kurs)})`:'';
-    notifyVisartEvent({type:'tolov_qilindi',obyektId,group:'moliya',entityTuri:'tolov',entityId:t.id,
-      matn:`Obyekt "${ob?ob.nom:obyektId}": to'lov qilindi — ${fmt(summa)} so'm${valyutaTxt}.`});
+    notifyVisartEvent({type:'tolov_qilindi',obyektId,entityTuri:'tolov',entityId:t.id,
+      matnMoliya:`Obyekt "${ob?ob.nom:obyektId}": to'lov qilindi — ${fmt(summa)} so'm${valyutaTxt}.`,
+      matnMijoz:`To'lovingiz qabul qilindi — ${fmt(summa)} so'm, ${sana}.`});
     tekshirBalansOginish(obyektId,qOldin);
   }
 }
@@ -4705,7 +4741,8 @@ async function saveEditTolov(){
     const ob=DB.obyektlar.find(o=>o.id===t.obyektId);
     const valyutaTxt=valyuta==='usd'?` ($${fmt(summaValyuta)} × ${fmt(kurs)})`:'';
     notifyVisartTuzatish('tolov',t.id,'tolov_qilindi',
-      `Obyekt "${ob?ob.nom:t.obyektId}": to'lov tahrirlandi — ${fmt(summa)} so'm${valyutaTxt}.`);
+      `Obyekt "${ob?ob.nom:t.obyektId}": to'lov tahrirlandi — ${fmt(summa)} so'm${valyutaTxt}.`,
+      `To'lovingiz tahrirlandi — ${fmt(summa)} so'm, ${t.sana}.`);
   }
 }
 
