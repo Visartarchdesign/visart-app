@@ -1284,6 +1284,19 @@ textarea.inp{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- MODAL: BUYURTMAGA QO'SHIMCHA AVANS -->
+<div class="mo" id="modalAvansQoshish" role="dialog" aria-modal="true">
+  <div class="ms">
+    <div class="ms-hd"><div class="handle"></div><div class="ms-t">Qo'shimcha avans</div></div>
+    <div class="ms-body">
+      <div class="info-box"><i class="ico"><svg><use href="#ic-wallet"/></svg></i> Hozirgi qoldiq: <b id="aqQoldiqLbl"></b></div>
+      <div class="fg"><label class="fl">Qo'shiladigan summa (so'm)</label><input class="inp" type="number" id="aqSumma" placeholder="1 000 000"></div>
+      <div class="fg"><label class="fl">Sana</label><input class="inp" type="date" id="aqSana"></div>
+    </div>
+    <div class="fa"><button class="btn-cancel" onclick="closeModal('avansQoshish')">Bekor</button><button class="btn-save" onclick="saveAvansQoshish()">Saqlash</button></div>
+  </div>
+</div>
+
 <!-- MODAL: XIZMAT HAQQI AVANS -->
 <div class="mo" id="modalAskConfirm" role="dialog" aria-modal="true" aria-labelledby="acMsg">
   <div class="ms" style="max-width:340px;border-radius:16px">
@@ -3028,8 +3041,9 @@ function renderZakaz(){
           <div class="zk-meta-b"><div class="zk-meta-l">Umumiy narx</div><div class="zk-meta-v">${fmt(z.umumiy)}</div></div>
           <div class="zk-meta-b"><div class="zk-meta-l">Tayyor bo'lish sanasi</div><div class="zk-meta-v" style="${isOverdue?'color:var(--err)':''}">${z.tayyorSana||'—'}</div></div>
         </div>
-        ${z.izoh?`<div style="margin-top:10px;font-size:12px;color:var(--t3);padding:8px 10px;background:var(--b2);border-radius:8px">${esc(z.izoh)}</div>`:''}
-        ${isP?`<div style="display:flex;gap:8px;margin-top:12px"><button class="btn-e" style="flex:1;padding:8px" onclick="openEditZakaz('${z.id}')"><i class="ico"><svg><use href="#ic-edit"/></svg></i> Tahrirlash</button><button class="btn-d" style="padding:8px 14px" aria-label="Buyurtmani o'chirish" onclick="deleteZakaz('${z.id}')"><i class="ico"><svg><use href="#ic-trash"/></svg></i></button></div>`:''}
+        ${z.izoh?`<div style="margin-top:10px;font-size:12px;color:var(--t3);padding:8px 10px;background:var(--b2);border-radius:8px;white-space:pre-line">${esc(z.izoh)}</div>`:''}
+        ${isP&&qoldiq>0?`<button class="btn-e" style="width:100%;margin-top:10px" onclick="openAvansQoshish('${z.id}')"><i class="ico"><svg><use href="#ic-wallet"/></svg></i> + Avans qo'shish</button>`:''}
+        ${isP?`<div style="display:flex;gap:8px;margin-top:8px"><button class="btn-e" style="flex:1;padding:8px" onclick="openEditZakaz('${z.id}')"><i class="ico"><svg><use href="#ic-edit"/></svg></i> Tahrirlash</button><button class="btn-d" style="padding:8px 14px" aria-label="Buyurtmani o'chirish" onclick="deleteZakaz('${z.id}')"><i class="ico"><svg><use href="#ic-trash"/></svg></i></button></div>`:''}
       </div>
     </div>`;
   }).join('');
@@ -3084,6 +3098,41 @@ async function deleteZakaz(id){
   deleteWithUndo('Buyurtma',
     async()=>{const{error}=await sb.from('zakazlar').delete().eq('id',id);if(error){notify('Xato — qaytarildi');await refreshDB();renderZakaz();}},
     ()=>{DB.zakazlar.push(z);renderZakaz();});
+}
+// ── Buyurtmaga vaqt o'tib qo'shimcha avans qo'shish (bitta sonni qayta yozish o'rniga) ──
+let _avansQoshishId=null;
+function openAvansQoshish(id){
+  const z=DB.zakazlar.find(v=>v.id===id);if(!z)return;
+  _avansQoshishId=id;
+  document.getElementById('aqQoldiqLbl').textContent=fmt(Math.max(0,z.umumiy-z.avans));
+  document.getElementById('aqSumma').value='';
+  document.getElementById('aqSana').value=today();
+  document.getElementById('modalAvansQoshish').classList.add('on');
+}
+async function saveAvansQoshish(){
+  const id=_avansQoshishId;const idx=DB.zakazlar.findIndex(z=>z.id===id);if(idx===-1)return;
+  const qo=parseFloat(document.getElementById('aqSumma').value);
+  if(!qo||qo<=0){notify("To'g'ri summa kiriting");return;}
+  const old=DB.zakazlar[idx];
+  const yangiAvans=old.avans+qo;
+  const yetdi=old.avans<old.umumiy&&yangiAvans>=old.umumiy; // aynan shu qo'shish bilan 100%ga yetdi
+  const sana=document.getElementById('aqSana').value||today();
+  const logQator=`${sana}: +${fmt(qo)} avans qo'shildi`;
+  const yangiIzoh=(old.izoh?old.izoh+'\n':'')+logQator;
+  const z={...old,avans:yangiAvans,izoh:yangiIzoh};
+  const{error}=await sb.from('zakazlar').update(zakToRow(z)).eq('id',id);
+  if(error){notify('Xato');console.error(error);return;}
+  await refreshDB();closeModal('avansQoshish');renderZakaz();notify("Avans qo'shildi");
+  if(yetdi){
+    const tugallandimi=await askConfirm("To'lov to'liq bo'ldi. Mahsulot haqiqatan ham yetkazib berilib, o'rnatib bo'lindimi?",{okText:"Ha, tugallandi"});
+    if(tugallandimi){
+      const idx2=DB.zakazlar.findIndex(v=>v.id===id);if(idx2===-1)return;
+      const z2={...DB.zakazlar[idx2],holat:'Ornatildi'};
+      const{error:e2}=await sb.from('zakazlar').update(zakToRow(z2)).eq('id',id);
+      if(!e2){await refreshDB();renderZakaz();notify('Buyurtma tugallandi deb belgilandi');}
+    }
+    // "Yo'q" tanlansa — holat o'zgarmaydi: pul to'liq, lekin ish hali tugallanmagan holatda qoladi
+  }
 }
 
 // ─── USTALAR ───
