@@ -1004,7 +1004,16 @@ textarea.inp{resize:vertical;min-height:80px}
         <div class="fg"><label class="fl">Sana</label><input class="inp" type="date" id="tSana"></div>
         <div class="fg"><label class="fl">To'lov turi</label><select class="inp" id="tTuri"><option>Naqd</option><option>Plastik karta</option><option>Bank o'tkazmasi</option></select></div>
       </div>
-      <div class="fg"><label class="fl">Summa (so'm)</label><input class="inp" type="number" id="tSumma" placeholder="5 000 000"></div>
+      <div class="fg"><label class="fl">Valyuta</label><select class="inp" id="tValyuta" onchange="toggleTolValyuta()"><option value="som">So'm</option><option value="usd">Dollar ($)</option></select></div>
+      <div class="fg" id="tSommaWrap"><label class="fl">Summa (so'm)</label><input class="inp" type="number" id="tSumma" placeholder="5 000 000"></div>
+      <div id="tUsdWrap" style="display:none">
+        <div class="fr">
+          <div class="fg"><label class="fl">Summa ($)</label><input class="inp" type="number" id="tSummaUsd" placeholder="500" oninput="calcTolKurs()"></div>
+          <div class="fg"><label class="fl">Kurs (1$ = ? so'm) <span style="color:var(--err)">*</span></label><input class="inp" type="number" id="tKurs" placeholder="12600" oninput="calcTolKurs()"></div>
+        </div>
+        <div class="fg" id="tKursInfo" style="font-size:12px;color:var(--t2)"></div>
+        <div class="fg"><label class="fl">Jami (so'm) — avtomatik</label><input class="inp" type="text" id="tSommaHisob" readonly style="font-weight:700;color:var(--t1);font-size:16px"></div>
+      </div>
       <div class="fg"><label class="fl">Izoh</label><input class="inp" type="text" id="tIzoh" placeholder="Oylik hisob-kitob…"></div>
     </div>
     <div class="fa"><button class="btn-cancel" onclick="closeModal('tolov')">Bekor</button><button class="btn-save" onclick="saveTolov()">Saqlash</button></div>
@@ -1260,7 +1269,15 @@ textarea.inp{resize:vertical;min-height:80px}
         <div class="fg"><label class="fl">Sana</label><input class="inp" type="date" id="eTolSana"></div>
         <div class="fg"><label class="fl">To'lov turi</label><select class="inp" id="eTolTuri"><option>Naqd</option><option>Plastik karta</option><option>Bank o'tkazmasi</option></select></div>
       </div>
-      <div class="fg"><label class="fl">Summa</label><input class="inp" type="number" id="eTolSumma"></div>
+      <div class="fg"><label class="fl">Valyuta</label><select class="inp" id="eTolValyuta" onchange="toggleEditTolValyuta()"><option value="som">So'm</option><option value="usd">Dollar ($)</option></select></div>
+      <div class="fg" id="eTolSommaWrap"><label class="fl">Summa (so'm)</label><input class="inp" type="number" id="eTolSumma"></div>
+      <div id="eTolUsdWrap" style="display:none">
+        <div class="fr">
+          <div class="fg"><label class="fl">Summa ($)</label><input class="inp" type="number" id="eTolSummaUsd" oninput="calcEditTolKurs()"></div>
+          <div class="fg"><label class="fl">Kurs (1$ = ? so'm)</label><input class="inp" type="number" id="eTolKurs" oninput="calcEditTolKurs()"></div>
+        </div>
+        <div class="fg"><label class="fl">Jami (so'm) — avtomatik</label><input class="inp" type="text" id="eTolSommaHisob" readonly style="font-weight:700;color:var(--t1);font-size:16px"></div>
+      </div>
       <div class="fg"><label class="fl">Izoh</label><input class="inp" type="text" id="eTolIzoh"></div>
     </div>
     <div class="fa"><button class="btn-cancel" onclick="closeEditModal('tolov')">Bekor</button><button class="btn-save" onclick="saveEditTolov()">Saqlash</button></div>
@@ -1559,8 +1576,42 @@ function obRow(r){return{id:r.id,nom:r.nom,mijozIsm:r.mijoz_ism,mijozLogin:r.mij
 function obToRow(o){return{id:o.id,nom:o.nom,mijoz_ism:o.mijozIsm,mijoz_login:o.mijozLogin,mijoz_tel:o.mijozTel,maydon:o.maydon,sana:o.sana,holat:o.holat,prorab_login:o.prorabLogin,smeta:o.smeta||0,xizmat_turi:o.xizmatTuri||'yoq',xizmat_foiz:o.xizmatFoiz||0,xizmat_oylik:o.xizmatOylik||0,obyekt_turi:o.obyektTuri||'ikki',tugash_sana:o.tugashSana||null,kompaniya_id:currentUser.kompaniyaId,muzlatilgan_sanasi:o.muzlatilganSanasi||null,muzlatilgan_kunlar:o.muzlatilganKunlar||0};}
 function xarRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,kat:r.kat,subkat:r.subkat,mahsulot:r.mahsulot,birlik:r.birlik,narx:r.narx!=null?Number(r.narx):null,miqdor:r.miqdor!=null?Number(r.miqdor):null,jami:Number(r.jami),izoh:r.izoh,rasmUrl:r.rasm_url,rasmlarQoshimcha:r.rasmlar_qoshimcha||'[]',umumiyNarx:r.umumiy_narx!=null?Number(r.umumiy_narx):null,tolovTuri:r.tolov_turi||null};}
 function xarToRow(x){return{id:x.id,obyekt_id:x.obyektId,sana:x.sana,kat:x.kat,subkat:x.subkat,mahsulot:x.mahsulot,birlik:x.birlik,narx:x.narx,miqdor:x.miqdor,jami:x.jami,izoh:x.izoh,rasm_url:x.rasmUrl||null,rasmlar_qoshimcha:x.rasmlarQoshimcha||'[]',kompaniya_id:currentUser.kompaniyaId,umumiy_narx:x.umumiyNarx!=null?x.umumiyNarx:null,tolov_turi:x.tolovTuri||null};}
-function tolRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,summa:Number(r.summa),turi:r.turi,izoh:r.izoh};}
-function tolToRow(t){return{id:t.id,obyekt_id:t.obyektId,sana:t.sana,summa:t.summa,turi:t.turi,izoh:t.izoh,kompaniya_id:currentUser.kompaniyaId};}
+function tolRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,summa:Number(r.summa),turi:r.turi,izoh:r.izoh,valyuta:r.valyuta||'som',summaValyuta:r.summa_valyuta!=null?Number(r.summa_valyuta):null,kurs:r.kurs!=null?Number(r.kurs):null};}
+function tolToRow(t){return{id:t.id,obyekt_id:t.obyektId,sana:t.sana,summa:t.summa,turi:t.turi,izoh:t.izoh,kompaniya_id:currentUser.kompaniyaId,valyuta:t.valyuta||'som',summa_valyuta:t.summaValyuta!=null?t.summaValyuta:null,kurs:t.kurs!=null?t.kurs:null};}
+
+// ─── TO'LOV: USD/SO'M VALYUTA ───
+async function fetchUsdKurs(targetInputId,infoElId){
+  try{
+    const{data,error}=await sb.functions.invoke('get-usd-kurs',{body:{}});
+    if(error||!data||!data.ok){return;}
+    const el=document.getElementById(targetInputId);
+    if(el&&!el.value)el.value=data.rate;
+    if(infoElId){const info=document.getElementById(infoElId);if(info)info.textContent=`Markaziy bank rasmiy kursi (${data.date}): ${fmt(data.rate)} so'm — real sotish kursiga moslab to'g'rilang`;}
+  }catch(e){console.warn('Kurs olinmadi',e);}
+}
+function toggleTolValyuta(){
+  const v=document.getElementById('tValyuta').value;
+  document.getElementById('tSommaWrap').style.display=v==='som'?'block':'none';
+  document.getElementById('tUsdWrap').style.display=v==='usd'?'block':'none';
+  if(v==='usd'&&!document.getElementById('tKurs').value){fetchUsdKurs('tKurs','tKursInfo');}
+  calcTolKurs();
+}
+function calcTolKurs(){
+  const usd=parseFloat(document.getElementById('tSummaUsd').value)||0;
+  const kurs=parseFloat(document.getElementById('tKurs').value)||0;
+  document.getElementById('tSommaHisob').value=usd&&kurs?fmt(Math.round(usd*kurs)):'';
+}
+function toggleEditTolValyuta(){
+  const v=document.getElementById('eTolValyuta').value;
+  document.getElementById('eTolSommaWrap').style.display=v==='som'?'block':'none';
+  document.getElementById('eTolUsdWrap').style.display=v==='usd'?'block':'none';
+  calcEditTolKurs();
+}
+function calcEditTolKurs(){
+  const usd=parseFloat(document.getElementById('eTolSummaUsd').value)||0;
+  const kurs=parseFloat(document.getElementById('eTolKurs').value)||0;
+  document.getElementById('eTolSommaHisob').value=usd&&kurs?fmt(Math.round(usd*kurs)):'';
+}
 function zakRow(r){return{id:r.id,obyektId:r.obyekt_id,nomi:r.nomi,turi:r.turi,taminotchi:r.taminotchi,umumiy:Number(r.umumiy),avans:Number(r.avans),sana:r.sana,tayyorSana:r.tayyor_sana,holat:r.holat,izoh:r.izoh};}
 function zakToRow(z){return{id:z.id,obyekt_id:z.obyektId,nomi:z.nomi,turi:z.turi,taminotchi:z.taminotchi,umumiy:z.umumiy,avans:z.avans,sana:z.sana,tayyor_sana:z.tayyorSana||null,holat:z.holat,izoh:z.izoh,kompaniya_id:currentUser.kompaniyaId};}
 function xizRow(r){return{id:r.id,obyektId:r.obyekt_id,sana:r.sana,summa:Number(r.summa),izoh:r.izoh};}
@@ -3053,7 +3104,7 @@ function renderTolovlar(){
     const ob=DB.obyektlar.find(o=>o.id===t.obyektId);
     const ic=t.turi==='Naqd'?'<i class="ico"><svg><use href="#ic-wallet"/></svg></i>':t.turi==='Plastik karta'?'<i class="ico"><svg><use href="#ic-card"/></svg></i>':'<i class="ico"><svg><use href="#ic-home"/></svg></i>';
     html+=`<div class="li">
-      <div class="li-body"><div class="li-title">${ic} ${t.turi}</div><div class="li-meta">${esc(ob?ob.nom.substring(0,28)+(ob.nom.length>28?'…':''):t.obyektId)}</div><div class="li-meta">${esc(t.sana)}${t.izoh?' · '+esc(t.izoh):''}</div></div>
+      <div class="li-body"><div class="li-title">${ic} ${t.turi}</div><div class="li-meta">${esc(ob?ob.nom.substring(0,28)+(ob.nom.length>28?'…':''):t.obyektId)}</div><div class="li-meta">${esc(t.sana)}${t.izoh?' · '+esc(t.izoh):''}</div>${t.valyuta==='usd'?`<div class="li-meta" style="color:var(--gold-d)">$${fmt(t.summaValyuta)} × ${fmt(t.kurs)} = ${fmt(t.summa)} so'm</div>`:''}</div>
       <div class="li-right"><span class="li-amt-g">+${fmt(t.summa)}</span>${isP?`<div class="li-btns"><button class="btn-e" onclick="openEditTolov('${t.id}')"><i class="ico"><svg><use href="#ic-edit"/></svg></i> Tahrir</button><button class="btn-d" aria-label="To'lovni o'chirish" onclick="deleteTolov('${t.id}')"><i class="ico"><svg><use href="#ic-trash"/></svg></i></button></div>`:''}</div>
     </div>`;
   });
@@ -4070,7 +4121,12 @@ function openModal(type){
     const obs=getObs();
     document.getElementById('tObyekt').innerHTML='<option value="">— Obyektni tanlang —</option>'+obs.map(o=>`<option value="${o.id}">${esc(o.nom)}</option>`).join('');
     document.getElementById('tObyekt').value='';
-    document.getElementById('tSana').value=today();document.getElementById('modalTolov').classList.add('on');
+    document.getElementById('tSana').value=today();
+    document.getElementById('tValyuta').value='som';
+    document.getElementById('tSummaUsd').value='';document.getElementById('tKurs').value='';
+    document.getElementById('tKursInfo').textContent='';
+    toggleTolValyuta();
+    document.getElementById('modalTolov').classList.add('on');
   }
   else if(type==='zakaz'){
     const obs=getObs();
@@ -4376,15 +4432,26 @@ async function saveXarajat(){
 async function saveTolov(){
   const obyektId=document.getElementById('tObyekt').value;
   if(!obyektId){notify("Obyektni tanlang");return;}
-  const summa=money(parseFloat(document.getElementById('tSumma').value));
   const sana=document.getElementById('tSana').value;
-  if(!validSumma(summa)){notify("To'g'ri summa kiriting");return;}
   if(!validSana(sana)){notify("Sana noto'g'ri (kelajak sanasi bo'lishi mumkin emas)");return;}
-  const t={id:genId('TOL'),obyektId,sana,summa,turi:document.getElementById('tTuri').value,izoh:document.getElementById('tIzoh').value};
+  const valyuta=document.getElementById('tValyuta').value;
+  let summa,summaValyuta=null,kurs=null;
+  if(valyuta==='usd'){
+    summaValyuta=money(parseFloat(document.getElementById('tSummaUsd').value));
+    kurs=parseFloat(document.getElementById('tKurs').value);
+    if(!validSumma(summaValyuta)){notify("To'g'ri summa ($) kiriting");return;}
+    if(!kurs||kurs<=0){notify("Kursni kiriting");return;}
+    summa=Math.round(summaValyuta*kurs);
+  }else{
+    summa=money(parseFloat(document.getElementById('tSumma').value));
+    if(!validSumma(summa)){notify("To'g'ri summa kiriting");return;}
+  }
+  const t={id:genId('TOL'),obyektId,sana,summa,turi:document.getElementById('tTuri').value,izoh:document.getElementById('tIzoh').value,valyuta,summaValyuta,kurs};
   const{error}=await sb.from('tolovlar').insert(tolToRow(t));
   if(error){notify('Saqlashda xato');console.error(error);return;}
   await refreshDB();closeModal('tolov');renderTolovlar();notify("To'lov saqlandi: "+fmt(summa));
   document.getElementById('tSumma').value='';document.getElementById('tIzoh').value='';
+  document.getElementById('tSummaUsd').value='';document.getElementById('tKurs').value='';
 }
 
 // ─── LOGIN GENERATOR ───
@@ -4524,14 +4591,29 @@ function openEditTolov(id){
   document.getElementById('eTolObyekt').innerHTML=obs.map(o=>`<option value="${o.id}"${o.id===t.obyektId?' selected':''}>${esc(o.nom)}</option>`).join('');
   document.getElementById('eTolId').value=t.id;document.getElementById('eTolSana').value=t.sana;document.getElementById('eTolSumma').value=t.summa;
   document.getElementById('eTolTuri').value=t.turi;document.getElementById('eTolIzoh').value=t.izoh||'';
+  document.getElementById('eTolValyuta').value=t.valyuta||'som';
+  document.getElementById('eTolSummaUsd').value=t.summaValyuta!=null?t.summaValyuta:'';
+  document.getElementById('eTolKurs').value=t.kurs!=null?t.kurs:'';
+  toggleEditTolValyuta();
   document.getElementById('modalEditTolov').classList.add('on');
 }
 async function saveEditTolov(){
-  const id=document.getElementById('eTolId').value,summa=parseFloat(document.getElementById('eTolSumma').value);
-  if(!summa){notify("Summani kiriting");return;}
+  const id=document.getElementById('eTolId').value;
   const idx=DB.tolovlar.findIndex(t=>t.id===id);if(idx===-1)return;
   const es=DB.tolovlar[idx].summa;
-  const t={...DB.tolovlar[idx],obyektId:document.getElementById('eTolObyekt').value,sana:document.getElementById('eTolSana').value,summa,turi:document.getElementById('eTolTuri').value,izoh:document.getElementById('eTolIzoh').value};
+  const valyuta=document.getElementById('eTolValyuta').value;
+  let summa,summaValyuta=null,kurs=null;
+  if(valyuta==='usd'){
+    summaValyuta=parseFloat(document.getElementById('eTolSummaUsd').value);
+    kurs=parseFloat(document.getElementById('eTolKurs').value);
+    if(!summaValyuta){notify("Summani ($) kiriting");return;}
+    if(!kurs||kurs<=0){notify("Kursni kiriting");return;}
+    summa=Math.round(summaValyuta*kurs);
+  }else{
+    summa=parseFloat(document.getElementById('eTolSumma').value);
+    if(!summa){notify("Summani kiriting");return;}
+  }
+  const t={...DB.tolovlar[idx],obyektId:document.getElementById('eTolObyekt').value,sana:document.getElementById('eTolSana').value,summa,turi:document.getElementById('eTolTuri').value,izoh:document.getElementById('eTolIzoh').value,valyuta,summaValyuta,kurs};
   const{error}=await sb.from('tolovlar').update(tolToRow(t)).eq('id',id);
   if(error){notify('Xato');console.error(error);return;}
   closeEditModal('tolov');await refreshDB();renderTolovlar();
