@@ -25,24 +25,44 @@ const err = (msg: string, status = 400) => j({ ok: false, error: msg }, status);
 
 const GEMINI_MODEL = "gemini-3.8-flash";
 
-const PROMPT = `Sen qurilish/ta'mirlash xarajatlari ro'yxatini o'qiydigan yordamchisan.
-Rasmda qo'lda yozilgan yoki chop etilgan xarajatlar ro'yxati bor (mahsulot nomi, miqdori,
-narxi, jami summasi — tartib aralash bo'lishi mumkin, ba'zi qatorlarda faqat jami summa
-yozilgan bo'lishi mumkin).
+const PROMPT = `Sen O'zbekistondagi qurilish/ta'mirlash xarajatlari ro'yxatini rasmdan o'qiydigan yordamchisan.
+Rasmda qo'lda yozilgan (ko'pincha o'zbek tilida, lotin YOKI kirill alifbosida, qisqartmalar bilan) yoki chop etilgan
+xarajatlar ro'yxati bor. Mahsulot nomi, miqdori, narxi, jami summasi aralash tartibda bo'lishi mumkin;
+ba'zi qatorlarda faqat jami summa yozilgan.
 
-Har bir qatorni quyidagi JSON massiv ko'rinishida chiqar, BOSHQA HECH NARSA YOZMA —
-izoh, tushuntirish, markdown belgilari (\`\`\`) ham kerak emas, FAQAT xom JSON massiv:
-[{"mahsulot":"nomi","birlik":"dona|kg|metr|litr|m²|m³|to'plam","narx":raqam_yoki_null,"miqdor":raqam_yoki_null,"jami":raqam}]
+Har bir xarajat qatorini quyidagi tuzilmada chiqar:
+{"mahsulot":"nomi","birlik":"dona|kg|metr|litr|m²|m³|to'plam","narx":raqam_yoki_null,"miqdor":raqam_yoki_null,"jami":raqam}
 
 Qoidalar:
-- Agar narx va miqdor ikkalasi ham aniq yozilgan bo'lsa — ikkalasini ham to'ldir, jami = narx*miqdor.
-- Agar faqat jami summa yozilgan, narx/miqdor ko'rinmasa — narx va miqdor'ni null qoldir, faqat jami'ni to'ldir.
-- Raqamlarni probel/vergul/so'm belgisisiz, sof son sifatida yoz (masalan "1 500 000 so'm" → 1500000).
-- Birlikni ro'yxatdagi so'zga eng yaqinini tanlab qo'y (mos kelmasa "dona" qo'y).
-- Rasmda umuman o'qib bo'lmaydigan/xira joy bo'lsa, o'sha qatorni butunlay tushirib qoldir.
-- Agar rasmda hech qanday xarajat qatori topa olmasang — bo'sh massiv [] qaytar.
+- Mahsulot nomini rasmdagi yozuvga yaqin, lotin alifbosida yoz (kirill bo'lsa lotinga o'gir). Hech narsa o'ylab topma.
+- Raqamlar: probel, nuqta, vergul — mingliklar ajratuvchisi ("1 500 000", "1.500.000", "1,500,000" → 1500000).
+  "ming", "k", "т", "mln/млн" kabi qisqartmalarni to'liq songa aylantir ("150 ming" → 150000, "2 mln" → 2000000, "75k" → 75000).
+  So'm/sum/UZS belgilarini tashla. Vergulli o'nlik kasrlar (masalan "2,5 kg") miqdorda saqlansin: 2.5.
+- Narx va miqdor ikkalasi aniq yozilgan bo'lsa — ikkalasini to'ldir. Jami sifatida rasmda YOZILGAN jami summani ol;
+  agar jami yozilmagan bo'lsa narx*miqdor.
+- Faqat jami summa yozilgan bo'lsa — narx va miqdor null, faqat jami.
+- Ustun sarlavhalari, sana, "Jami:/Itogo" umumiy yig'indi qatori, ustiga chizilgan (o'chirilgan) qatorlar — xarajat qatori EMAS, tushirib qoldir.
+- Birlikni ro'yxatdagi eng yaqiniga moslab tanla (mos kelmasa "dona").
+- Rasmda butunlay o'qib bo'lmaydigan joyni tushirib qoldir, lekin o'qiy olgan hamma qatorni chiqar. Qatorlar tartibini rasmdagidek saqla.
+- Hech qanday xarajat topa olmasang — bo'sh massiv [] qaytar.
 
-Shu rasmdagi xarajatlar ro'yxatini yuqoridagi qoidalar bo'yicha JSON qilib chiqar.`;
+Javob FAQAT JSON massiv bo'lsin (izoh, markdown yo'q).`;
+
+// Gemini'ga JSON sxemasini majburlaymiz — "o'qib bo'lmadi" xatolarini keskin kamaytiradi
+const RESPONSE_SCHEMA = {
+  type: "ARRAY",
+  items: {
+    type: "OBJECT",
+    properties: {
+      mahsulot: { type: "STRING" },
+      birlik: { type: "STRING" },
+      narx: { type: "NUMBER", nullable: true },
+      miqdor: { type: "NUMBER", nullable: true },
+      jami: { type: "NUMBER" },
+    },
+    required: ["mahsulot", "birlik", "jami"],
+  },
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -67,7 +87,8 @@ Deno.serve(async (req) => {
   }
 
   const imageBase64 = payload.imageBase64 as string;
-  const mediaType = (payload.mediaType as string) || "image/jpeg";
+  const ALLOWED_MEDIA = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+  const mediaType = ALLOWED_MEDIA.includes(payload.mediaType as string) ? (payload.mediaType as string) : "image/jpeg";
   if (!imageBase64) return err("Rasm yuborilmadi");
 
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
@@ -76,33 +97,52 @@ Deno.serve(async (req) => {
   // data: URI bo'lsa, faqat base64 qismini ajratamiz
   const base64Data = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
 
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-    const res = await fetch(url, {
+  const callGemini = async (structured: boolean) => {
+    const generationConfig: Record<string, unknown> = {
+      temperature: 0,
+      // Thinking-modellar o'ylash tokenlarini ham shu limitdan sarflaydi — uzun ro'yxat JSON'i
+      // o'rtasida uzilib qolmasligi uchun katta zaxira beramiz.
+      maxOutputTokens: 16384,
+    };
+    if (structured) {
+      generationConfig.responseMimeType = "application/json";
+      generationConfig.responseSchema = RESPONSE_SCHEMA;
+    }
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
       body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: PROMPT },
-            { inline_data: { mime_type: mediaType, data: base64Data } },
-          ],
-        }],
-        generationConfig: { temperature: 0, maxOutputTokens: 4096 },
+        contents: [{ parts: [{ text: PROMPT }, { inline_data: { mime_type: mediaType, data: base64Data } }] }],
+        generationConfig,
       }),
     });
-    const data = await res.json();
+    return { res, data: await res.json() };
+  };
+
+  try {
+    let { res, data } = await callGemini(true);
+    // Model sxemani qabul qilmasa (400) — sxemasiz qayta urinamiz
+    if (!res.ok && res.status === 400) {
+      console.warn("structured output rad etildi, sxemasiz qayta urinish", data?.error?.message);
+      ({ res, data } = await callGemini(false));
+    }
     if (!res.ok) {
       console.error("gemini error", data);
       return err("AI xizmatidan xato: " + (data?.error?.message || res.status));
     }
-    const textOut: string = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const cand = data?.candidates?.[0];
+    if (cand?.finishReason && cand.finishReason !== "STOP") console.warn("gemini finishReason", cand.finishReason);
+    // "thought" qismlarini tashlab, faqat javob matnini birlashtiramiz
+    const textOut: string = (cand?.content?.parts || [])
+      .filter((p: { thought?: boolean; text?: string }) => !p.thought && typeof p.text === "string")
+      .map((p: { text: string }) => p.text).join("");
     let items: unknown;
     try {
-      const match = textOut.match(/\[[\s\S]*\]/);
-      items = JSON.parse(match ? match[0] : textOut);
+      const clean = textOut.replace(/```json|```/g, "").trim();
+      const match = clean.match(/\[[\s\S]*\]/);
+      items = JSON.parse(match ? match[0] : clean);
     } catch (e) {
-      console.error("parse error", e, textOut);
+      console.error("parse error", e, cand?.finishReason, textOut);
       return err("AI javobini o'qib bo'lmadi — rasmni aniqroq oling va qayta urining");
     }
     if (!Array.isArray(items)) return err("Noto'g'ri format qaytdi");

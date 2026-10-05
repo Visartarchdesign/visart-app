@@ -4280,11 +4280,12 @@ async function handleXarajatRasmFile(input){
   const status=document.getElementById('xrStatus');
   status.textContent='Rasm tayyorlanmoqda...';
   try{
-    const compressed=await compressImage(file);
+    // AI o'qishi uchun yuqori sifat: qo'lyozma mayda harflari 1400px da xiralashadi (saqlash uchun emas, faqat tahlil uchun)
+    const compressed=await compressImage(file,2*1024*1024,2600,1800);
     const dataUrl=await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsDataURL(compressed);});
     const preview=document.getElementById('xrPreview');preview.src=dataUrl;preview.style.display='block';
     status.textContent="Sun'iy intellekt o'qimoqda, biroz kuting (10-20 soniya)...";
-    const{data,error}=await sb.functions.invoke('parse-xarajat-rasm',{body:{imageBase64:dataUrl,mediaType:'image/jpeg'}});
+    const{data,error}=await sb.functions.invoke('parse-xarajat-rasm',{body:{imageBase64:dataUrl,mediaType:compressed.type||'image/jpeg'}});
     if(error||!data||data.ok!==true){
       status.textContent='';
       notify((data&&data.error)||"Rasmni o'qib bo'lmadi — qayta urinib ko'ring");
