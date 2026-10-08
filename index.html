@@ -1437,6 +1437,7 @@ textarea.inp{resize:vertical;min-height:80px}
         <div class="fg"><label class="fl">Login</label><input class="inp" type="text" id="fpLogin" autocapitalize="none" placeholder="jasur.rahimov"></div>
         <div class="fg"><label class="fl">Telefon raqami</label><input class="inp" type="text" id="fpTel" placeholder="+998 90 123 45 67"></div>
         <div class="lerr" id="fpError1"></div>
+        <div class="forgot-link" onclick="superTgReset()" style="margin-top:10px">Superadminmisiz? Telegram orqali tiklash</div>
       </div>
       <div id="fpStep2" style="display:none">
         <div class="info-box">Tasdiqlandi. Endi yangi parol o'ylab toping.</div>
@@ -1826,6 +1827,26 @@ function openForgotPassword(){
   document.getElementById('fpBtn1').style.display='block';document.getElementById('fpBtn2').style.display='none';
   document.getElementById('fpError1').style.display='none';document.getElementById('fpError2').style.display='none';document.getElementById('fpOk2').style.display='none';
   document.getElementById('modalForgot').classList.add('on');
+}
+// ─── SUPERADMIN: Telegram orqali (visartdesign.uz/api/moliya-auth) ───
+const MOLIYA_AUTH_API='https://visartdesign.uz/api/moliya-auth';
+async function moliyaAuthCall(body){
+  const r=await fetch(MOLIYA_AUTH_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  return r.json().catch(()=>({ok:false}));
+}
+async function superTgReset(){
+  const login=(prompt('Superadmin login:')||'').trim().toLowerCase();
+  if(!login)return;
+  const a=await moliyaAuthCall({action:'reset_request',login});
+  if(a.error==='wait'){alert("1 daqiqa kuting va qayta urining");return;}
+  if(!a.ok){alert("Kod yuborib bo'lmadi. Keyinroq urinib ko'ring.");return;}
+  const code=(prompt('Telegram botga kelgan 8 xonali kodni kiriting:')||'').trim();
+  if(!code)return;
+  const pw=prompt('Yangi parol (kamida 10 belgi, harf va raqam):')||'';
+  if(!pw)return;
+  const c=await moliyaAuthCall({action:'reset_confirm',login,code,password:pw});
+  if(c.ok){alert("Parol almashtirildi. Endi yangi parol bilan kiring.");closeForgotPassword();}
+  else alert(c.error==='weak_password'?"Parol kuchsiz: kamida 10 belgi, harf va raqam bo'lsin":"Kod noto'g'ri yoki muddati tugagan");
 }
 function closeForgotPassword(){document.getElementById('modalForgot').classList.remove('on');}
 async function verifyForgotPassword(){
@@ -2505,6 +2526,7 @@ async function doLogin(){
     const{data,error}=await withTimeout(sb.auth.signInWithPassword({email:toAuthEmail(login),password:pass}),15000,"Ulanish vaqti tugadi — internetingizni tekshirib qayta urining");
     callManageAuth('record_login_result',{login,success:!error});
     if(error||!data.user){showErr('loginError',"Login yoki parol noto'g'ri");return;}
+    const _tok=data&&data.session&&data.session.access_token;
     const ok=await withTimeout(loadCurrentProfile(),15000,"Profilni yuklashda vaqt tugadi — qayta urining");
     if(!ok){showErr('loginError','Profil topilmadi — administratorga murojaat qiling');await sb.auth.signOut();return;}
     if(currentUser.rol!=='superadmin'&&currentUser.kompaniyaId){
@@ -2514,6 +2536,7 @@ async function doLogin(){
         await sb.auth.signOut();currentUser=null;return;
       }
     }
+    if(currentUser.rol==='superadmin'&&_tok){try{moliyaAuthCall({action:'login_alert',token:_tok});}catch(e){}}
     const rememberEl=document.getElementById('rememberMe');
     if(rememberEl&&!rememberEl.checked)sessionStorage.setItem('visart_no_remember','1');
     else sessionStorage.removeItem('visart_no_remember');
@@ -3041,6 +3064,8 @@ let xarFilter={kat:'',subkat:'',from:'',to:'',q:'',obyekt:''};
 // Obyekt filtri select'ini prorabning obyektlari bilan to'ldiradi (joriy tanlovni saqlab qolgan holda)
 function fillObyektFilter(selectId){
   const sel=document.getElementById(selectId);if(!sel)return;
+  // Mijozda faqat bitta (o'z) obyekti bor — filtr keraksiz, yashiriladi
+  if(currentUser&&currentUser.rol==='mijoz'){sel.style.display='none';sel.value='';return;}
   const val=sel.value;
   const obs=getObs();
   sel.innerHTML='<option value="">Barcha obyektlar</option>'+obs.map(o=>`<option value="${o.id}">${esc(o.nom)}</option>`).join('');
