@@ -1628,11 +1628,12 @@ function calcEditTolKurs(){
 // o'zi hal qiladi (matnMijoz yo'q bo'lsa — faqat moliyaga ketadi).
 async function notifyVisartEvent(opts){
   try{
-    await sb.functions.invoke('notify-visart-event',{body:{
+    const r=await sb.functions.invoke('notify-visart-event',{body:{
       entity_turi:opts.entityTuri,entity_id:opts.entityId,hodisa_turi:opts.type,
       obyekt_id:opts.obyektId,matn_moliya:opts.matnMoliya,matn_mijoz:opts.matnMijoz||null,
       summa:opts.summa!=null?opts.summa:null,urgent:!!opts.urgent
     }});
+    if(r&&(r.error||(r.data&&r.data.ok===false)))notify('⚠️ Telegramga xabar yuborilmadi');
   }catch(e){console.warn('notifyVisartEvent xato (e\'tiborsiz qoldirildi)',e);}
 }
 async function notifyVisartTuzatish(entityTuri,entityId,hodisaTuri,matnMoliya,matnMijoz,summa){
