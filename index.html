@@ -3041,6 +3041,8 @@ let xarFilter={kat:'',subkat:'',from:'',to:'',q:'',obyekt:''};
 // Obyekt filtri select'ini prorabning obyektlari bilan to'ldiradi (joriy tanlovni saqlab qolgan holda)
 function fillObyektFilter(selectId){
   const sel=document.getElementById(selectId);if(!sel)return;
+  // Mijozda faqat bitta (o'z) obyekti bor — filtr keraksiz, yashiriladi
+  if(currentUser&&currentUser.rol==='mijoz'){sel.style.display='none';sel.value='';return;}
   const val=sel.value;
   const obs=getObs();
   sel.innerHTML='<option value="">Barcha obyektlar</option>'+obs.map(o=>`<option value="${o.id}">${esc(o.nom)}</option>`).join('');
