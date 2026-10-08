@@ -3313,6 +3313,14 @@ async function saveEditZakaz(){
   const{error}=await sb.from('zakazlar').update(zakToRow(z)).eq('id',id);
   if(error){notify('Xato');console.error(error);return;}
   await refreshDB();closeEditModal('zakaz');renderZakaz();notify('Buyurtma yangilandi');
+  {
+    const ob=DB.obyektlar.find(o=>o.id===z.obyektId),obNom=ob?ob.nom:z.obyektId;
+    notifyVisartTuzatish('zakaz',z.id,'zakaz_yaratildi',
+      `Obyekt "${obNom}": buyurtma tahrirlandi — ${z.nomi}${z.turi?' ('+z.turi+')':''}, umumiy narx ${fmt(z.umumiy)} so'm${z.taminotchi?', ta\'minotchi: '+z.taminotchi:''}.`,
+      `${z.nomi} buyurtma qilindi: umumiy to'lov ${fmt(z.umumiy)} so'm${z.avans>0?`, avans ${fmt(z.avans)} so'm`:''}, qoldiq ${fmt(Math.max(0,z.umumiy-z.avans))} so'm.`);
+    if(z.avans>0)notifyVisartTuzatish('zakaz-avans',z.id,'avans_qayd_etildi',
+      `Obyekt "${obNom}": buyurtma avansi tahrirlandi — ${z.nomi}, ${fmt(z.avans)} so'm.`,null,z.avans);
+  }
   if((z.holat==='Yetkazildi'||z.holat==='Ornatildi')&&eskiHolat!==z.holat&&eskiHolat!=='Yetkazildi'&&eskiHolat!=='Ornatildi'){
     const ob=DB.obyektlar.find(o=>o.id===z.obyektId),obNom=ob?ob.nom:z.obyektId;
     notifyVisartEvent({type:'zakaz_tayyor',obyektId:z.obyektId,entityTuri:'zakaz-tayyor',entityId:z.id,
@@ -4718,7 +4726,7 @@ async function saveEditXarajat(){
     const ob=DB.obyektlar.find(o=>o.id===x.obyektId);
     notifyVisartTuzatish('xarajat',x.id,'xarajat_qoshildi',
       `Obyekt "${ob?ob.nom:x.obyektId}": xarajat tahrirlandi — ${x.mahsulot}, ${fmt(x.jami)} so'm.`,
-      null,x.jami);
+      `Xarajat: ${fmt(x.jami)} so'm`,x.jami);
   }
 }
 function closeEditModal(t){document.getElementById('modalEdit'+t[0].toUpperCase()+t.slice(1)).classList.remove('on');}
