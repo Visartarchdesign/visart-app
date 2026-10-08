@@ -3275,13 +3275,12 @@ async function saveZakaz(){
   ['zNomi','zTaminotchi','zUmumiy','zAvans','zQoldiq','zTayyorSana','zIzoh'].forEach(id=>document.getElementById(id).value='');
   {
     const ob=DB.obyektlar.find(o=>o.id===obyektId),obNom=ob?ob.nom:obyektId;
-    notifyVisartEvent({type:'zakaz_yaratildi',obyektId,entityTuri:'zakaz',entityId:z.id,summa:umumiy,
+    notifyVisartEvent({type:'zakaz_yaratildi',obyektId,entityTuri:'zakaz',entityId:z.id,
       matnMoliya:`Obyekt "${obNom}": yangi buyurtma yaratildi — ${nomi}${z.turi?' ('+z.turi+')':''}, umumiy narx ${fmt(umumiy)} so'm${z.taminotchi?', ta\'minotchi: '+z.taminotchi:''}.`,
-      matnMijoz:`Obyektingiz uchun ${nomi} buyurtma qilindi.`});
+      matnMijoz:`${nomi} buyurtma qilindi: umumiy to'lov ${fmt(umumiy)} so'm${avans>0?`, avans ${fmt(avans)} so'm`:''}, qoldiq ${fmt(Math.max(0,umumiy-avans))} so'm.`});
     if(avans>0){
       notifyVisartEvent({type:'avans_qayd_etildi',obyektId,entityTuri:'zakaz-avans',entityId:z.id,summa:avans,
-        matnMoliya:`Obyekt "${obNom}": buyurtma avansi qayd etildi — ${nomi}, ${fmt(avans)} so'm.`,
-        matnMijoz:`Buyurtmangiz (${nomi}) uchun avans qayd etildi — ${fmt(avans)} so'm.`});
+        matnMoliya:`Obyekt "${obNom}": buyurtma avansi qayd etildi — ${nomi}, ${fmt(avans)} so'm.`});
     }
   }
 }
@@ -3315,7 +3314,7 @@ async function saveEditZakaz(){
   await refreshDB();closeEditModal('zakaz');renderZakaz();notify('Buyurtma yangilandi');
   if((z.holat==='Yetkazildi'||z.holat==='Ornatildi')&&eskiHolat!==z.holat&&eskiHolat!=='Yetkazildi'&&eskiHolat!=='Ornatildi'){
     const ob=DB.obyektlar.find(o=>o.id===z.obyektId),obNom=ob?ob.nom:z.obyektId;
-    notifyVisartEvent({type:'zakaz_tayyor',obyektId:z.obyektId,entityTuri:'zakaz-tayyor',entityId:z.id,summa:z.umumiy,
+    notifyVisartEvent({type:'zakaz_tayyor',obyektId:z.obyektId,entityTuri:'zakaz-tayyor',entityId:z.id,
       matnMoliya:`Obyekt "${obNom}": buyurtma ${z.holat==='Ornatildi'?"o'rnatildi":'yetkazildi'} — ${z.nomi}.`,
       matnMijoz:`Obyektingiz uchun ${z.nomi} ${z.holat==='Ornatildi'?"o'rnatildi":'yetkazib berildi'}.`});
   }
@@ -4191,7 +4190,7 @@ async function saveEditObyekt(){
   if(newHolat==='Muzlatilgan'&&oldOb.holat!=='Muzlatilgan'){
     notifyVisartEvent({type:'obyekt_muzlatildi',obyektId:id,urgent:true,entityTuri:'obyekt_muzlatish',entityId:id+'-'+today(),
       matnMoliya:`Obyekt "${nom}": qurilish holati "Muzlatilgan"ga o'tkazildi.`,
-      matnMijoz:`Diqqat: obyektingiz ("${nom}") bo'yicha pul mablag'i tugagani sababli qurilish jarayoni vaqtincha to'xtatildi.`});
+      matnMijoz:`⏸ Diqqat: obyektingiz ("${nom}") bo'yicha pul mablag'i tugagani sababli qurilish jarayoni vaqtincha to'xtatildi.\n\nIshni davom ettirish uchun, iltimos, navbatdagi to'lovni amalga oshiring. To'lov qabul qilingach, ishlar darhol qayta boshlanadi. Savollar bo'lsa, menejerimiz bilan bog'laning. 🙏`});
   }
 }
 
@@ -4541,8 +4540,9 @@ async function saveXarajat(){
   {
     const ob=DB.obyektlar.find(o=>o.id===obyektId);
     notifyVisartEvent({type:'xarajat_qoshildi',obyektId,entityTuri:'xarajat',entityId:x.id,summa:x.jami,
-      matnMoliya:`Obyekt "${ob?ob.nom:obyektId}": xarajat qo'shildi — ${x.mahsulot}, ${fmt(x.jami)} so'm.`});
-      // mijozga yuborilmaydi — ichki xarajat/marja oshkor bo'lmasin
+      matnMoliya:`Obyekt "${ob?ob.nom:obyektId}": xarajat qo'shildi — ${x.mahsulot}, ${fmt(x.jami)} so'm.`,
+      matnMijoz:`Xarajat: ${fmt(x.jami)} so'm`});
+      // mijozga faqat summa (kunlik hisobotda jamlanadi); nom/tafsilot yuborilmaydi
     tekshirBalansOginish(obyektId,qOldin);
   }
   ['fMahsulot','fNarx','fMiqdor','fJami','fIzoh','fRasmUrl','fBoshqaUmumiy','fBoshqaKelishilgan','fBoshqaAvans','fBoshqaQoldiq'].forEach(id=>document.getElementById(id).value='');
