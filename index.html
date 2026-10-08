@@ -1636,6 +1636,13 @@ async function notifyVisartEvent(opts){
     if(r&&(r.error||(r.data&&r.data.ok===false)))notify('⚠️ Telegramga xabar yuborilmadi');
   }catch(e){console.warn('notifyVisartEvent xato (e\'tiborsiz qoldirildi)',e);}
 }
+async function notifyVisartOchirish(entityTuri,entityId,hodisaTuri,obyektId){
+  try{
+    await sb.functions.invoke('notify-visart-event',{body:{
+      entity_turi:entityTuri,entity_id:entityId,hodisa_turi:hodisaTuri,obyekt_id:obyektId||undefined,ochirish:true
+    }});
+  }catch(e){console.warn('notifyVisartOchirish xato (e\'tiborsiz qoldirildi)',e);}
+}
 async function notifyVisartTuzatish(entityTuri,entityId,hodisaTuri,matnMoliya,matnMijoz,summa){
   try{
     await sb.functions.invoke('notify-visart-event',{body:{
@@ -3147,7 +3154,7 @@ async function deleteXarajat(id){
   const x=DB.xarajatlar.find(v=>v.id===id);if(!x)return;
   DB.xarajatlar=DB.xarajatlar.filter(v=>v.id!==id);renderXarajatlar();
   deleteWithUndo('Xarajat',
-    async()=>{const{error}=await sb.from('xarajatlar').delete().eq('id',id);if(error){notify('Xato — qaytarildi');await refreshDB();renderXarajatlar();}},
+    async()=>{const{error}=await sb.from('xarajatlar').delete().eq('id',id);if(error){notify('Xato — qaytarildi');await refreshDB();renderXarajatlar();return;}notifyVisartOchirish('xarajat',id,'xarajat_qoshildi',x.obyektId);},
     ()=>{DB.xarajatlar.push(x);renderXarajatlar();});
 }
 function renderXarajatRasmThumbs(x){
@@ -3204,7 +3211,7 @@ async function deleteTolov(id){
   const t=DB.tolovlar.find(v=>v.id===id);if(!t)return;
   DB.tolovlar=DB.tolovlar.filter(v=>v.id!==id);renderTolovlar();
   deleteWithUndo("To'lov",
-    async()=>{const{error}=await sb.from('tolovlar').delete().eq('id',id);if(error){notify('Xato — qaytarildi');await refreshDB();renderTolovlar();}},
+    async()=>{const{error}=await sb.from('tolovlar').delete().eq('id',id);if(error){notify('Xato — qaytarildi');await refreshDB();renderTolovlar();return;}notifyVisartOchirish('tolov',id,'tolov_qilindi',t.obyektId);},
     ()=>{DB.tolovlar.push(t);renderTolovlar();});
 }
 
@@ -3332,7 +3339,7 @@ async function deleteZakaz(id){
   const z=DB.zakazlar.find(v=>v.id===id);if(!z)return;
   DB.zakazlar=DB.zakazlar.filter(v=>v.id!==id);renderZakaz();
   deleteWithUndo('Buyurtma',
-    async()=>{const{error}=await sb.from('zakazlar').delete().eq('id',id);if(error){notify('Xato — qaytarildi');await refreshDB();renderZakaz();}},
+    async()=>{const{error}=await sb.from('zakazlar').delete().eq('id',id);if(error){notify('Xato — qaytarildi');await refreshDB();renderZakaz();return;}notifyVisartOchirish('zakaz',id,'zakaz_yaratildi',z.obyektId);notifyVisartOchirish('zakaz-avans',id,'avans_qayd_etildi',z.obyektId);},
     ()=>{DB.zakazlar.push(z);renderZakaz();});
 }
 // ── Buyurtmaga vaqt o'tib qo'shimcha avans qo'shish (bitta sonni qayta yozish o'rniga) ──
