@@ -4547,7 +4547,7 @@ async function saveTolov(){
   const t={id:genId('TOL'),obyektId,sana,summa,turi:document.getElementById('tTuri').value,izoh:document.getElementById('tIzoh').value,valyuta,summaValyuta,kurs};
   const qOldin=obyektQoldiqHisobla(obyektId);
   const{error}=await sb.from('tolovlar').insert(tolToRow(t));
-  if(error){notify('Saqlashda xato');console.error(error);return;}
+  if(error){notify('Saqlashda xato: '+(error.message||error.code||'').slice(0,120));console.error(error);return;}
   await refreshDB();closeModal('tolov');renderTolovlar();notify("To'lov saqlandi: "+fmt(summa));
   document.getElementById('tSumma').value='';document.getElementById('tIzoh').value='';
   document.getElementById('tSummaUsd').value='';document.getElementById('tKurs').value='';
