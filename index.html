@@ -1812,9 +1812,10 @@ let KOMPANIYA_KOD_DINAMIK=null;
 async function loadKompaniyaKod(){
   try{
     if(!currentUser?.kompaniyaId)return KOMPANIYA_KOD;
-    const{data,error}=await sb.from('kompaniyalar').select('kod').eq('id',currentUser.kompaniyaId).maybeSingle();
+    if(currentUser.rol==='mijoz'){KOMPANIYA_KOD_DINAMIK=KOMPANIYA_KOD;return KOMPANIYA_KOD;} // mijoz kodni ko'rmaydi
+    const{data,error}=await sb.rpc('kompaniya_kodi');
     if(error||!data){KOMPANIYA_KOD_DINAMIK=KOMPANIYA_KOD;return KOMPANIYA_KOD;}
-    KOMPANIYA_KOD_DINAMIK=data.kod;return data.kod;
+    KOMPANIYA_KOD_DINAMIK=data;return data;
   }catch(e){console.error(e);KOMPANIYA_KOD_DINAMIK=KOMPANIYA_KOD;return KOMPANIYA_KOD;}
 }
 async function saveKompaniyaKod(newKod){

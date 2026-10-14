@@ -67,7 +67,7 @@ create policy mijoz_self_upd on mijozlar for update
 
 create or replace function mijoz_guard() returns trigger language plpgsql security definer set search_path=public as $$
 begin
-  if is_prorab() or auth.role() = 'service_role' then return new; end if;
+  if auth.uid() is null or is_prorab() or auth.role() = 'service_role' then return new; end if;
   if new.user_id is distinct from old.user_id or new.obyekt_id is distinct from old.obyekt_id
      or new.kompaniya_id is distinct from old.kompaniya_id then
     raise exception 'Bu maydonlarni o''zgartirib bo''lmaydi';
