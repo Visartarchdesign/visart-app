@@ -2533,7 +2533,11 @@ async function doLogin(){
     if(!check.ok){showErr('loginError',check.error||"Juda ko'p urinish");return;}
     const{data,error}=await withTimeout(sb.auth.signInWithPassword({email:toAuthEmail(login),password:pass}),15000,"Ulanish vaqti tugadi — internetingizni tekshirib qayta urining");
     callManageAuth('record_login_result',{login,success:!error});
-    if(error||!data.user){showErr('loginError',"Login yoki parol noto'g'ri");return;}
+    if(error||!data.user){
+      console.error('signIn xato',error);
+      const em=error?((error.code||'')+' '+(error.message||'')).trim():'';
+      const cred=!error||/invalid_credentials|Invalid login credentials/i.test(em);
+      showErr('loginError',cred?"Login yoki parol noto'g'ri":"Kirish xatosi: "+em.slice(0,140));return;}
     const _tok=data&&data.session&&data.session.access_token;
     const ok=await withTimeout(loadCurrentProfile(),15000,"Profilni yuklashda vaqt tugadi — qayta urining");
     if(!ok){showErr('loginError','Profil topilmadi — administratorga murojaat qiling');await sb.auth.signOut();return;}
