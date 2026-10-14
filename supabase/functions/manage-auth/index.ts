@@ -575,19 +575,19 @@ Deno.serve(async (req) => {
       case "check_login_allowed": {
         const login = normLogin(payload.login as string);
         if (!login) return err("Login kerak");
-        const windowAgo = new Date(Date.now() - 15 * 60_000).toISOString();
+        const windowAgo = new Date(Date.now() - 2 * 60_000).toISOString();
         const { data: attempts } = await admin.from("login_attempts")
           .select("success, created_at").eq("login", login).gte("created_at", windowAgo)
           .order("created_at", { ascending: false }).limit(10);
         const fails = (attempts || []).filter(a => !a.success);
-        // Ketma-ket 5 ta muvaffaqiyatsiz urinishdan keyin (oxirgi muvaffaqiyatlisiga qadar) bloklaymiz
+        // Ketma-ket 6 ta muvaffaqiyatsiz urinishdan keyin (oxirgi muvaffaqiyatlisiga qadar) bloklaymiz
         let consecutiveFails = 0;
         for (const a of (attempts || [])) {
           if (a.success) break;
           consecutiveFails++;
         }
-        if (consecutiveFails >= 5) {
-          return err("Juda ko'p noto'g'ri urinish. 15 daqiqadan keyin qayta urining.", 429);
+        if (consecutiveFails >= 6) {
+          return err("Juda ko'p noto'g'ri urinish. 2 daqiqadan keyin qayta urining.", 429);
         }
         return j({ ok: true });
       }
