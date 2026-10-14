@@ -292,7 +292,22 @@ Deno.serve(async (req) => {
         ]);
         if (p1 || m1) return err("Bu login band");
 
-        const re = await renameLogin(caller.id, newLogin);
+        // Nishon: odatda chaqiruvchining o'zi. targetLogin berilsa — prorab O'Z kompaniyasidagi MIJOZ loginini o'zgartiradi.
+        let targetUid = caller.id;
+        const targetLogin = payload.targetLogin ? normLogin(payload.targetLogin as string) : "";
+        if (targetLogin) {
+          const callerProrab = await getCallerProrab();
+          if (!callerProrab) return err("Ruxsat yo'q", 403);
+          if (targetLogin !== callerProrab.login) {
+            const { data: tm } = await admin.from("mijozlar")
+              .select("user_id, kompaniya_id").eq("login", targetLogin).maybeSingle();
+            if (!tm?.user_id || tm.kompaniya_id !== callerProrab.kompaniya_id) return err("Ruxsat yo'q", 403);
+            if (tm.user_id === caller.id) return err("Ruxsat yo'q", 403);
+            targetUid = tm.user_id;
+          }
+        }
+
+        const re = await renameLogin(targetUid, newLogin);
         if (re) return err(re);
         return j({ ok: true });
       }
