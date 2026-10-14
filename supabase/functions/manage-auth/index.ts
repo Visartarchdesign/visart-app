@@ -54,6 +54,47 @@ Deno.serve(async (req) => {
   const jwt = (req.headers.get("Authorization") || "").replace("Bearer ", "");
   const { data: { user: caller } } = await admin.auth.getUser(jwt);
 
+  // ── Audit: muhim amallar kim tomonidan bajarilgani yoziladi (xato bo'lsa asosiy amalga ta'sir qilmaydi) ──
+  const audit = async (amal: string, target: string | null, izoh: Record<string, unknown> = {}) => {
+    try {
+      await admin.from("auth_audit").insert({
+        manba: "edge", jadval: "manage-auth", amal, kim: caller?.id ?? null,
+        qator_user_id: target, yangi: izoh,
+      });
+    } catch (_) { /* e'tiborsiz */ }
+  };
+
+  // ── Login almashtirish: Auth emaili va profil jadvallari BIRGA o'zgaradi yoki BIRGA qaytariladi ──
+  // Xato bo'lsa matn qaytaradi, muvaffaqiyatda null.
+  const renameLogin = async (uid: string, newLogin: string): Promise<string | null> => {
+    const { data: u0 } = await admin.auth.admin.getUserById(uid);
+    const oldEmail = u0?.user?.email ?? null;
+    const oldLogin = oldEmail ? oldEmail.split("@")[0] : null;
+
+    const { error: ae } = await admin.auth.admin.updateUserById(uid, { email: toAuthEmail(newLogin) });
+    if (ae) return ae.message;
+
+    const revert = async () => {
+      if (oldLogin) {
+        await admin.from("prorablar").update({ login: oldLogin }).eq("user_id", uid);
+        await admin.from("mijozlar").update({ login: oldLogin }).eq("user_id", uid);
+      }
+      if (oldEmail) await admin.auth.admin.updateUserById(uid, { email: oldEmail });
+    };
+
+    const { error: e1 } = await admin.from("prorablar").update({ login: newLogin }).eq("user_id", uid);
+    if (e1) { await revert(); return e1.message; }
+    const { data: mj, error: e2 } = await admin.from("mijozlar")
+      .update({ login: newLogin }).eq("user_id", uid).select("obyekt_id").maybeSingle();
+    if (e2) { await revert(); return e2.message; }
+    if (mj?.obyekt_id) {
+      const { error: e3 } = await admin.from("obyektlar").update({ mijoz_login: newLogin }).eq("id", mj.obyekt_id);
+      if (e3) { await revert(); return e3.message; }
+    }
+    await audit("login_ozgardi", uid, { eski: oldLogin, yangi: newLogin });
+    return null;
+  };
+
   // Chaqiruvchi prorabmi? Bo'lsa — uning kompaniya_id'sini ham qaytaradi.
   // Kompaniya bloklangan (faol=false) bo'lsa — null qaytaradi (ruxsat yo'q).
   const getCallerProrab = async (): Promise<{ login: string; kompaniya_id: string } | null> => {
@@ -145,6 +186,7 @@ Deno.serve(async (req) => {
 
         const { error } = await admin.auth.admin.updateUserById(uid, { password: newPassword });
         if (error) return err(error.message);
+        await audit("parol_tiklandi", uid, { login: targetLogin });
         return j({ ok: true });
       }
 
@@ -250,12 +292,8 @@ Deno.serve(async (req) => {
         ]);
         if (p1 || m1) return err("Bu login band");
 
-        const { error: ae } = await admin.auth.admin.updateUserById(caller.id, { email: toAuthEmail(newLogin) });
-        if (ae) return err(ae.message);
-        await admin.from("prorablar").update({ login: newLogin }).eq("user_id", caller.id);
-        await admin.from("mijozlar").update({ login: newLogin }).eq("user_id", caller.id);
-        const { data: mj } = await admin.from("mijozlar").select("obyekt_id").eq("user_id", caller.id).maybeSingle();
-        if (mj?.obyekt_id) await admin.from("obyektlar").update({ mijoz_login: newLogin }).eq("id", mj.obyekt_id);
+        const re = await renameLogin(caller.id, newLogin);
+        if (re) return err(re);
         return j({ ok: true });
       }
 
@@ -477,6 +515,7 @@ Deno.serve(async (req) => {
 
         const { error } = await admin.auth.admin.updateUserById(uid, { password: newPassword });
         if (error) return err(error.message);
+        await audit("parol_tiklandi", uid, { login: targetLogin });
         return j({ ok: true });
       }
 
@@ -498,11 +537,8 @@ Deno.serve(async (req) => {
         const uid = mj?.user_id || pr?.user_id;
         if (!uid) return err("Foydalanuvchi topilmadi");
 
-        const { error: ae } = await admin.auth.admin.updateUserById(uid, { email: toAuthEmail(newLogin) });
-        if (ae) return err(ae.message);
-        await admin.from("prorablar").update({ login: newLogin }).eq("user_id", uid);
-        await admin.from("mijozlar").update({ login: newLogin }).eq("user_id", uid);
-        if (mj?.obyekt_id) await admin.from("obyektlar").update({ mijoz_login: newLogin }).eq("id", mj.obyekt_id);
+        const re = await renameLogin(uid, newLogin);
+        if (re) return err(re);
         return j({ ok: true });
       }
 
@@ -514,6 +550,7 @@ Deno.serve(async (req) => {
         const { data: pr } = await admin.from("prorablar").select("user_id").eq("login", targetLogin).maybeSingle();
         const uid = mj?.user_id || pr?.user_id;
         if (!uid) return err("Foydalanuvchi topilmadi");
+        await audit("foydalanuvchi_ochirildi", uid, { login: targetLogin });
         const { error } = await admin.auth.admin.deleteUser(uid);
         if (error) return err(error.message);
         return j({ ok: true });
